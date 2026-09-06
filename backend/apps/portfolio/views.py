@@ -20,6 +20,7 @@ from apps.pages.api_mixins import (
     workflow_perms,
 )
 from apps.pages.models import PublishStatus
+from apps.pages.response_cache import CachedPublicReadMixin
 from apps.permissions.permissions import HasRequiredPermissions
 
 from .filters import ProjectFilter
@@ -30,21 +31,22 @@ from .serializers import (
     ProjectListSerializer,
 )
 
-_DETAIL_PREFETCH = ("services", "technology", "images__image", "documents__document")
+_DETAIL_PREFETCH = ("services", "technology", "images__image__document", "documents__document")
 
 
-class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
+class ProjectViewSet(CachedPublicReadMixin, viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filterset_class = ProjectFilter
+    cache_namespace = "portfolio"
 
     def get_queryset(self):
         qs = Project.objects.filter(status=PublishStatus.PUBLISHED).select_related(
-            "country", "client_industry", "og_image"
+            "country", "client_industry", "og_image__document"
         )
         if self.action == "retrieve":
             return qs.prefetch_related(*_DETAIL_PREFETCH)
-        return qs.prefetch_related("images__image").distinct()
+        return qs.prefetch_related("images__image__document").distinct()
 
     def get_serializer_class(self):
         return ProjectDetailSerializer if self.action == "retrieve" else ProjectListSerializer

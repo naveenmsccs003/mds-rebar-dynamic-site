@@ -22,6 +22,7 @@ from apps.pages.api_mixins import (
     workflow_perms,
 )
 from apps.pages.models import PublishStatus
+from apps.pages.response_cache import CachedPublicReadMixin
 from apps.permissions.permissions import HasRequiredPermissions
 
 from .models import News
@@ -43,17 +44,18 @@ class NewsFilter(filters.FilterSet):
         )
 
 
-class NewsViewSet(viewsets.ReadOnlyModelViewSet):
+class NewsViewSet(CachedPublicReadMixin, viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filterset_class = NewsFilter
+    cache_namespace = "news"
 
     def get_queryset(self):
         qs = News.objects.filter(status=PublishStatus.PUBLISHED).select_related(
-            "featured_image", "author"
+            "featured_image__document", "author"
         ).prefetch_related("tags")
         if self.action == "retrieve":
-            return qs.select_related("og_image")
+            return qs.select_related("og_image__document")
         return qs.distinct()
 
     def get_serializer_class(self):

@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny
 
 from apps.permissions.permissions import HasRequiredPermissions
 
+from .response_cache import CachedPublicReadMixin
+
 from .api_mixins import (
     VersionedViewSetMixin,
     WorkflowViewSetMixin,
@@ -80,14 +82,17 @@ class RedirectViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
 
-class PublicPageView(ListAPIView):
+class PublicPageView(CachedPublicReadMixin, ListAPIView):
     """Published sections for one page, ordered — what the public site
-    renders (Phase 5 wires the React pages to this)."""
+    renders (Phase 5 wires the React pages to this). Cached in the
+    `pages` namespace (docs/PERFORMANCE.md); any PageSection write bumps
+    it, so an edit is never served stale."""
 
     serializer_class = PublicPageSectionSerializer
     permission_classes = [AllowAny]
     pagination_class = None
     queryset = PageSection.objects.none()  # real filter is in get_queryset
+    cache_namespace = "pages"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

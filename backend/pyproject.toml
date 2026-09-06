@@ -29,6 +29,7 @@ ignore = [
 "**/tests.py" = ["S", "DJ"]
 "**/test_*.py" = ["S", "DJ"]
 "conftest.py" = ["S"]
+"locustfile.py" = ["S311"]  # `random` picks load-test traffic, not secrets
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "*/migrations/*"]

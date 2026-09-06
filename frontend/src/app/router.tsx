@@ -1,62 +1,62 @@
+import { type ComponentType, type ReactElement, lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
-import { AboutPage } from "../features/about/AboutPage";
-import { CareersListPage } from "../features/careers/CareersListPage";
-import { JobDetailTemplate } from "../features/careers/JobDetailTemplate";
-import { ContactPage } from "../features/contact/ContactPage";
 import { HomePage } from "../features/home/HomePage";
-import { RequestQuotePage } from "../features/quote/RequestQuotePage";
-import { SearchPage } from "../features/search/SearchPage";
 import { LegalPage } from "../features/legal/LegalPage";
-import { NewsArticlePage } from "../features/news/NewsArticlePage";
-import { NewsListPage } from "../features/news/NewsListPage";
-import { PortfolioDetailTemplate } from "../features/portfolio/PortfolioDetailTemplate";
-import { PortfolioListTemplate } from "../features/portfolio/PortfolioListTemplate";
-import { ResourceListTemplate } from "../features/resources/ResourceListTemplate";
-import { ServiceDetailTemplate } from "../features/services/ServiceDetailTemplate";
-import { ServiceListPage } from "../features/services/ServiceListPage";
+import { RouteFallback } from "../layouts/RouteFallback";
 import { PublicLayout } from "../layouts/PublicLayout";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 
 /**
- * Route table matching the public navigation in the spec (§7). Filled in
- * by phase: home/about/legal/404 (Phase 5), services (Phase 6),
- * portfolio/resources/news (Phase 7), careers (Phase 8),
- * contact/request-quote (Phase 9), search (Phase 11). The remaining
- * routes stay `PlaceholderPage` until their owning phase
- * (blogs/events/csr → 7-later, admin/logins → later).
+ * Route table matching the public navigation in the spec (§7).
+ *
+ * Every non-home route is code-split (`React.lazy`) so the initial
+ * bundle is just the shell + homepage (docs/PERFORMANCE.md "Frontend":
+ * "Code splitting per route"). Vite emits one chunk per `import()`; the
+ * `<Suspense>` fallback below covers the fetch.
  *
  * Services/Portfolio/News/Blogs/Events detail routes use a single
  * `:slug` param feeding one reusable template component each (spec §10 —
- * never one React page per service/article), not a route per item.
+ * never one React page per service/article).
  */
+function route<M>(loader: () => Promise<M>, pick: (m: M) => ComponentType): ReactElement {
+  const Lazy = lazy(() => loader().then((m) => ({ default: pick(m) })));
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <Lazy />
+    </Suspense>
+  );
+}
+
+const placeholder = (title: string) => ({ element: <PlaceholderPage title={title} /> });
+
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <PublicLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: "about", element: <AboutPage /> },
-      { path: "services", element: <ServiceListPage /> },
-      { path: "services/:slug", element: <ServiceDetailTemplate /> },
-      { path: "portfolio", element: <PortfolioListTemplate /> },
-      { path: "portfolio/:slug", element: <PortfolioDetailTemplate /> },
-      { path: "resources", element: <ResourceListTemplate /> },
-      { path: "news", element: <NewsListPage /> },
-      { path: "news/:slug", element: <NewsArticlePage /> },
-      { path: "blogs", element: <PlaceholderPage title="Blogs" /> },
-      { path: "blogs/:slug", element: <PlaceholderPage title="Blog Post" /> },
-      { path: "events", element: <PlaceholderPage title="Events" /> },
-      { path: "events/:slug", element: <PlaceholderPage title="Event Detail" /> },
-      { path: "csr", element: <PlaceholderPage title="CSR" /> },
-      { path: "careers", element: <CareersListPage /> },
-      { path: "careers/:slug", element: <JobDetailTemplate /> },
-      { path: "contact", element: <ContactPage /> },
-      { path: "request-quote", element: <RequestQuotePage /> },
-      { path: "search", element: <SearchPage /> },
-      { path: "login/staff", element: <PlaceholderPage title="Staff Login" /> },
-      { path: "login/knowledge-base", element: <PlaceholderPage title="Knowledge Base Login" /> },
+      { path: "about", element: route(() => import("../features/about/AboutPage"), (m) => m.AboutPage) },
+      { path: "services", element: route(() => import("../features/services/ServiceListPage"), (m) => m.ServiceListPage) },
+      { path: "services/:slug", element: route(() => import("../features/services/ServiceDetailTemplate"), (m) => m.ServiceDetailTemplate) },
+      { path: "portfolio", element: route(() => import("../features/portfolio/PortfolioListTemplate"), (m) => m.PortfolioListTemplate) },
+      { path: "portfolio/:slug", element: route(() => import("../features/portfolio/PortfolioDetailTemplate"), (m) => m.PortfolioDetailTemplate) },
+      { path: "resources", element: route(() => import("../features/resources/ResourceListTemplate"), (m) => m.ResourceListTemplate) },
+      { path: "news", element: route(() => import("../features/news/NewsListPage"), (m) => m.NewsListPage) },
+      { path: "news/:slug", element: route(() => import("../features/news/NewsArticlePage"), (m) => m.NewsArticlePage) },
+      { path: "blogs", ...placeholder("Blogs") },
+      { path: "blogs/:slug", ...placeholder("Blog Post") },
+      { path: "events", ...placeholder("Events") },
+      { path: "events/:slug", ...placeholder("Event Detail") },
+      { path: "csr", ...placeholder("CSR") },
+      { path: "careers", element: route(() => import("../features/careers/CareersListPage"), (m) => m.CareersListPage) },
+      { path: "careers/:slug", element: route(() => import("../features/careers/JobDetailTemplate"), (m) => m.JobDetailTemplate) },
+      { path: "contact", element: route(() => import("../features/contact/ContactPage"), (m) => m.ContactPage) },
+      { path: "request-quote", element: route(() => import("../features/quote/RequestQuotePage"), (m) => m.RequestQuotePage) },
+      { path: "search", element: route(() => import("../features/search/SearchPage"), (m) => m.SearchPage) },
+      { path: "login/staff", ...placeholder("Staff Login") },
+      { path: "login/knowledge-base", ...placeholder("Knowledge Base Login") },
       { path: "legal/privacy-policy", element: <LegalPage slug="privacy-policy" /> },
       { path: "legal/terms", element: <LegalPage slug="terms" /> },
       { path: "legal/nda", element: <LegalPage slug="nda" /> },

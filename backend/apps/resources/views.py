@@ -21,6 +21,7 @@ from rest_framework.permissions import AllowAny
 from apps.documents import services as documents
 from apps.documents.exceptions import FileNotReady
 from apps.pages.api_mixins import crud_perms
+from apps.pages.response_cache import CachedPublicReadMixin
 from apps.permissions.permissions import HasRequiredPermissions
 from config.api_responses import ok
 
@@ -43,13 +44,16 @@ class ResourceFilter(filters.FilterSet):
         return queryset.filter(Q(title__icontains=value) | Q(description__icontains=value))
 
 
-class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
+class ResourceViewSet(CachedPublicReadMixin, viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filterset_class = ResourceFilter
+    cache_namespace = "resources"
 
     def get_queryset(self):
-        return Resource.objects.filter(is_published=True).select_related("thumbnail", "file")
+        return Resource.objects.filter(is_published=True).select_related(
+            "thumbnail__document", "file"
+        )
 
     def get_serializer_class(self):
         return ResourceDetailSerializer if self.action == "retrieve" else ResourceListSerializer

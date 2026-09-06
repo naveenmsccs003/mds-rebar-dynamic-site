@@ -23,6 +23,7 @@ from apps.pages.api_mixins import (
     workflow_perms,
 )
 from apps.pages.models import PublishStatus
+from apps.pages.response_cache import CachedPublicReadMixin
 from apps.permissions.permissions import HasRequiredPermissions
 
 from .filters import ServiceFilter
@@ -36,20 +37,25 @@ from .serializers import (
 _CHILD_PREFETCH = ("capabilities", "process_steps", "faqs", "technology")
 
 
-class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
-    """Public catalogue. Only PUBLISHED services are ever visible."""
+class ServiceViewSet(CachedPublicReadMixin, viewsets.ReadOnlyModelViewSet):
+    """Public catalogue. Only PUBLISHED services are ever visible.
+    Responses are cached (docs/PERFORMANCE.md) — the `services` cache
+    namespace is bumped on any Service / child-row write."""
 
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filterset_class = ServiceFilter
+    cache_namespace = "services"
 
     def get_queryset(self):
+        # `__document` is pulled too: MediaRefSerializer.url resolves the
+        # underlying documents.Document (docs/PERFORMANCE.md — no N+1).
         qs = Service.objects.filter(status=PublishStatus.PUBLISHED)
         if self.action == "retrieve":
-            return qs.select_related("hero_image", "icon", "og_image").prefetch_related(
-                *_CHILD_PREFETCH
-            )
-        return qs.select_related("hero_image", "icon")
+            return qs.select_related(
+                "hero_image__document", "icon__document", "og_image__document"
+            ).prefetch_related(*_CHILD_PREFETCH)
+        return qs.select_related("hero_image__document", "icon__document")
 
     def get_serializer_class(self):
         return ServiceDetailSerializer if self.action == "retrieve" else ServiceListSerializer

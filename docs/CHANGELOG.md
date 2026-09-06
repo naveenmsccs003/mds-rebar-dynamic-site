@@ -448,3 +448,32 @@
     so it ignores `e2e/`; `frontend/.gitignore` gets the Playwright
     output dirs.
   - `docs/TESTING.md` + `docs/CHANGELOG.md` updated.
+- Phase 14 (Performance): query audit, response caching, code splitting,
+  load-test scaffold.
+  - `tests/test_query_performance.py` — 8 query-count guards
+    (`django_assert_max_num_queries`) over the hot public endpoints;
+    they caught one N+1: Phase 10's `image.url` resolves
+    `MediaAsset.document`, absent from every content list's
+    `select_related`. Fixed — `services` / `news` / `portfolio` /
+    `resources` public querysets now pull `..._image__document` /
+    `images__image__document`.
+  - `apps.pages.response_cache.CachedPublicReadMixin` — caches the 200
+    AllowAny GET list/retrieve responses of `services` / `news` /
+    `portfolio` / `resources` / `pages/{key}` under a key embedding a
+    per-namespace version counter. `bump(namespace)` (wired from
+    post_save/post_delete in `apps.pages.apps.ready()`) invalidates the
+    whole namespace at once — no stale content past an edit. 5-min TTL
+    ceiling. `tests/test_response_cache.py` (4 tests: hit, invalidation,
+    admin-edit reflected, per-filter keys).
+  - Frontend route code splitting: `src/app/router.tsx` lazy-loads every
+    route but the homepage (`React.lazy` + `<Suspense>` `RouteFallback`).
+    Initial JS ~142 kB gzip → ~84 kB; the rest per route (0.3–6 kB) or a
+    shared vendor chunk. `web-vitals` (`src/app/reportWebVitals.ts`)
+    reports LCP/INP/CLS/FCP/TTFB — logs in dev, RUM sink is Phase 15.
+  - `backend/locustfile.py` — `PublicVisitor` weighted across the hot
+    read endpoints + one throttled write. `locust` in
+    `requirements/dev.txt` (also `-r test.txt` so dev gets the lint
+    tools). Not in CI.
+  - +12 backend tests → 252 passed, 1 skipped; `ruff` / `bandit` clean.
+    Frontend 91 tests + 4 E2E green; `lint` / `build` green.
+  - `docs/PERFORMANCE.md` + `docs/CHANGELOG.md` updated.
