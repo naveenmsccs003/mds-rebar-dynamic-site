@@ -1,6 +1,7 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 
-from .models import ContentVersion, PageSection, SiteSetting, Tag
+from . import workflow
+from .models import ContentVersion, PageSection, PublishStatus, Redirect, SiteSetting, Tag
 
 
 class PublishableContentAdmin(admin.ModelAdmin):
@@ -15,11 +16,42 @@ class PublishableContentAdmin(admin.ModelAdmin):
     filter_horizontal = ("tags",)
 
 
+def _bulk_transition(modeladmin, request, queryset, target):
+    done, skipped = 0, 0
+    for obj in queryset:
+        if workflow.can_transition(request.user, obj, target):
+            workflow.transition(obj, target, user=request.user, request=request, note="admin bulk action")
+            done += 1
+        else:
+            skipped += 1
+    modeladmin.message_user(
+        request,
+        f"{done} section(s) moved to {target}; {skipped} skipped "
+        f"(not a legal transition or missing permission).",
+        level=messages.SUCCESS if done else messages.WARNING,
+    )
+
+
 @admin.register(PageSection)
 class PageSectionAdmin(admin.ModelAdmin):
-    list_display = ("page_key", "section_key", "status", "display_order", "updated_at")
+    list_display = ("page_key", "section_key", "status", "display_order", "published_at", "updated_at")
     list_filter = ("page_key", "status")
     search_fields = ("page_key", "section_key")
+    readonly_fields = ("status", "published_at", "current_version", "created_at", "updated_at")
+
+    @admin.action(description="Submit selected sections for review")
+    def submit_for_review(self, request, queryset):
+        _bulk_transition(self, request, queryset, PublishStatus.REVIEW)
+
+    @admin.action(description="Publish selected sections")
+    def publish(self, request, queryset):
+        _bulk_transition(self, request, queryset, PublishStatus.PUBLISHED)
+
+    @admin.action(description="Archive selected sections")
+    def archive(self, request, queryset):
+        _bulk_transition(self, request, queryset, PublishStatus.ARCHIVED)
+
+    actions = ["submit_for_review", "publish", "archive"]
 
 
 @admin.register(SiteSetting)
@@ -32,6 +64,13 @@ class SiteSettingAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Redirect)
+class RedirectAdmin(admin.ModelAdmin):
+    list_display = ("old_path", "new_path", "is_permanent", "created_at")
+    search_fields = ("old_path", "new_path")
+    list_filter = ("is_permanent",)
 
 
 @admin.register(ContentVersion)

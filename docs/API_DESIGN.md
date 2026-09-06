@@ -76,6 +76,30 @@ POST   /api/v1/auth/password/reset/        (public, throttled; no user enumerati
 POST   /api/v1/auth/password/reset/confirm/ (public; signed token, 24h TTL)
 ```
 
+## CMS endpoints (Phase 4 — implemented)
+Admin surface — session auth + per-action Django permissions
+(`HasRequiredPermissions`), under `/api/v1/admin/cms/`:
+```
+GET/POST        /api/v1/admin/cms/sections/                     (pages.view/add_pagesection; ?page_key=&status=)
+GET/PATCH/DELETE /api/v1/admin/cms/sections/{id}/               (pages.view/change/delete_pagesection)
+POST            /api/v1/admin/cms/sections/{id}/transition/     body {to, note}; pages.change_pagesection,
+                                                                 and pages.publish_pagesection for →published / un-publish / archive-a-live-page
+GET             /api/v1/admin/cms/sections/{id}/versions/       (pages.view_pagesection; paginated, newest first)
+POST            /api/v1/admin/cms/sections/{id}/versions/{vid}/rollback/   (pages.change_pagesection)
+GET/POST/PATCH/DELETE /api/v1/admin/cms/settings/              (pages.*_sitesetting; write invalidates the Redis cache)
+GET/POST/PATCH/DELETE /api/v1/admin/cms/tags/                  (pages.*_tag)
+GET/POST/PATCH/DELETE /api/v1/admin/cms/redirects/            (pages.*_redirect)
+```
+`status`, `published_at`, `current_version` are read-only on the section
+serializer — status only moves via `transition/`. Rich text inside
+`content` is sanitised on write. Error codes: `INVALID_TRANSITION` (400),
+`PERMISSION_DENIED` (403), plus the standard envelope set.
+
+Public surface — no auth, read-only, published content only:
+```
+GET    /api/v1/pages/{page_key}/            published PageSections, ordered by display_order
+```
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

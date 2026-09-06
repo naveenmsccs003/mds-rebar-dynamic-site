@@ -40,10 +40,20 @@ app at a time, in the order listed in `DEVELOPMENT_PHASES.md`.
   `assigned_by`, `assigned_at`).
 
 ### `pages` (CMS / homepage / about / legal / settings)
-- `PageSection` (page_key, section_key, ordering, status, JSON `content`
-  for flexible section-level fields, `version` FK to `ContentVersion`).
+- `PageSection` (page_key, section_key, display_order, JSON `content` for
+  flexible section-level fields; publishing-workflow fields `status`,
+  `published_at`, `scheduled_publish_at`, and `current_version` FK to
+  `ContentVersion`; `updated_by`). Unique on `(page_key, section_key)`.
 - `SiteSetting` (key, value, value_type) — global config (contact info
-  defaults, feature flags) editable from admin, cached in Redis.
+  defaults, feature flags) editable from admin, cached in Redis
+  (invalidated on save via a `post_save`/`post_delete` signal).
+- `ContentVersion` (generic FK, `snapshot` JSON, `edited_by`, `edited_at`)
+  — one row per edit / workflow transition for any CMS model; see
+  `apps.pages.versioning` (`snapshot()` / `rollback()`).
+- `Redirect` (old_path [unique], new_path, is_permanent, note,
+  created_by) — 301/302 kept when a public slug changes so links and
+  rankings survive (`docs/SEO.md`); `apps.pages.redirects.create_redirect`
+  keeps the graph flat (no 301→301 chains).
 
 ### `services`
 - `Service` (name, slug [unique, indexed], short_description,
@@ -202,6 +212,43 @@ it and left here so the plan and the code don't drift apart silently:
   a real PostgreSQL instance (not just SQLite, which has no real
   row-level locking) with 8 concurrent threads racing for the same
   year's counter and receiving 8 distinct, sequential references.
+
+## Implementation notes (Phase 4)
+
+- **`PageSection` gained the workflow/versioning fields** `published_at`,
+  `scheduled_publish_at` (indexed with `status`), and `current_version`
+  (FK → `ContentVersion`), plus the custom permission
+  `pages.publish_pagesection` (`Meta.permissions`). `ContentVersion` and
+  `Redirect` were already-planned tables; `Redirect` is added now (model
+  + helper) though the middleware that serves the 301s is a later phase.
+- **The publishing workflow is generic, not per-model.**
+  `apps.pages.workflow.transition()` drives any model with a `status`
+  (`PublishStatus`) field through DRAFT → REVIEW → APPROVED → PUBLISHED →
+  ARCHIVED, snapshotting + writing an `AuditLog` row on every move.
+  `change_<model>` covers the review states; `publish_<model>` is
+  required for anything that changes what the public sees (→ PUBLISHED,
+  un-publish, archive a live page). Phase 4 wires it to `PageSection`;
+  Services / News / Blog / Event / CSR / LegalDocument adopt the same
+  two functions in their own phases. The finer-grained
+  `review`/`unpublish`/`archive`/`rollback` permissions sketched in
+  `RBAC_DESIGN.md` are collapsed to `change` + `publish` for now and can
+  be split out later without a data migration (`sync_roles` re-resolves).
+- **Versioning stores a full field snapshot**, not a diff
+  (`apps.pages.versioning.serialize_instance` — local concrete fields as
+  `<name>_id` for FKs, M2M as PK lists under `__m2m__`, datetimes ISO).
+  `rollback()` reapplies a snapshot and is itself recorded as a new
+  version, so the current state is never only reconstructable by
+  replaying diffs.
+- **Rich-text sanitisation** (`apps.pages.sanitize.sanitize_html`, `bleach`
+  allow-list) drops `<script>`/`<style>`/`<iframe>`, every `on*`
+  handler, and non-`http(s)/mailto/tel` URLs; `style` attributes are
+  disallowed outright (no CSS parser to vet them). `SanitizedHTMLField`
+  (a DRF serializer field) is the reuse hook for content models with an
+  HTML `TextField`; `PageSection.content` is structured JSON, so its
+  serializer sanitises string values held at `*_html` keys.
+- Verified on SQLite in the build environment (no PostgreSQL client
+  available there); introduces no PG-specific SQL — CI runs the suite on
+  PostgreSQL.
 
 ## Performance rules applied throughout
 - `select_related` for FK, `prefetch_related` for M2M/reverse-FK, on every

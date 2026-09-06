@@ -252,6 +252,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# Beat entries defined here are synced into django-celery-beat's tables on
+# startup. Time-based CMS work (docs/TARGET_ARCHITECTURE.md §5).
+CELERY_BEAT_SCHEDULE = {
+    "pages-publish-scheduled-content": {
+        "task": "pages.publish_scheduled_content",
+        "schedule": 60.0,
+    },
+}
+
 # --- Cache (Redis) -----------------------------------------------------------
 CACHES = {
     "default": {

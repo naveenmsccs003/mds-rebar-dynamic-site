@@ -57,3 +57,38 @@
   `INSTALLED_APPS` with ~15 FKs pointing at `media.MediaAsset` — a fresh
   clone could not boot Django. Rules anchored (`/media/`,
   `/staticfiles/`) and the app added to version control.
+- Phase 4 (CMS): a generic, reusable publishing workflow + version
+  history for CMS content, wired to `pages.PageSection`.
+  - `apps.pages.workflow.transition()` moves any model with a `status`
+    field through DRAFT → REVIEW → APPROVED → PUBLISHED → ARCHIVED,
+    enforcing `change_<model>` for the review states and
+    `publish_<model>` for anything that changes what the public sees;
+    each transition snapshots the object and writes an `AuditLog` row.
+    Illegal moves return `INVALID_TRANSITION` (400). A Celery-beat task
+    (`pages.publish_scheduled_content`, every minute) publishes APPROVED
+    sections whose `scheduled_publish_at` has passed.
+  - `apps.pages.versioning` — `snapshot()` writes a full field state into
+    `ContentVersion` (generic FK); `rollback()` restores a past snapshot
+    and is itself versioned. `PageSection` gained `published_at`,
+    `scheduled_publish_at`, `current_version`, and the
+    `pages.publish_pagesection` permission (migrations `0002`, `0003`).
+  - `apps.pages.sanitize.sanitize_html` — `bleach` allow-list stripping
+    `<script>`/`<style>`/`<iframe>`, `on*` handlers, `javascript:` URLs
+    and inline `style`; `SanitizedHTMLField` serializer field for later
+    content models; `PageSection.content` JSON is sanitised at `*_html`
+    keys.
+  - CMS API under `/api/v1/admin/cms/` (session auth + per-action
+    permissions): `sections/` CRUD + `transition/` + `versions/` +
+    `versions/{id}/rollback/`; `settings/` (writes invalidate the Redis
+    cache via signal); `tags/`; `redirects/`. Public read-only
+    `GET /api/v1/pages/{page_key}/` returns published sections in order.
+  - `pages.Redirect` (old_path → new_path 301/302) +
+    `create_redirect()` helper (collapses redirect chains) for
+    slug-change handling; admin bulk publish/review/archive actions route
+    through the workflow.
+  - 43 new backend tests (sanitiser, versioning + rollback, workflow +
+    permission split + scheduled publish, redirects, CMS API CRUD +
+    transitions + rollback + cache invalidation + public read). Full
+    suite: 126 passed, 1 skipped. Verified on SQLite (no PostgreSQL
+    client in the build env); no PG-specific SQL introduced.
+  - `docs/API_DESIGN.md` and `docs/DATABASE_DESIGN.md` updated.

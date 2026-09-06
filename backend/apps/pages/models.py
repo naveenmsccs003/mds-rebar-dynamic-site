@@ -96,13 +96,29 @@ class PublishableContent(TimestampedModel, SEOFields):
 class PageSection(TimestampedModel):
     """Ordered, admin-editable sections for structurally-fixed pages
     (homepage, about, legal) whose content still must never be hardcoded
-    into a React component (spec §8/§88)."""
+    into a React component (spec §8/§88).
+
+    Carries the shared publishing workflow (`apps.pages.workflow`) and
+    generic version history (`apps.pages.versioning`): `status` moves
+    DRAFT -> REVIEW -> APPROVED -> PUBLISHED -> ARCHIVED, `published_at` /
+    `scheduled_publish_at` track go-live, and `current_version` points at
+    the `ContentVersion` snapshot of the state now in `content`.
+    """
 
     page_key = models.SlugField(max_length=100, db_index=True, help_text="e.g. 'home', 'about'.")
     section_key = models.SlugField(max_length=100, help_text="e.g. 'hero', 'why-mds'.")
     display_order = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=PublishStatus.choices, default=PublishStatus.DRAFT)
     content = models.JSONField(default=dict, blank=True, help_text="Section-specific structured fields.")
+
+    published_at = models.DateTimeField(null=True, blank=True, help_text="Set when status last became PUBLISHED.")
+    scheduled_publish_at = models.DateTimeField(
+        null=True, blank=True, db_index=True,
+        help_text="If set on an APPROVED section, a Celery beat task publishes it at this time.",
+    )
+    current_version = models.ForeignKey(
+        "pages.ContentVersion", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -113,7 +129,11 @@ class PageSection(TimestampedModel):
         constraints = [
             models.UniqueConstraint(fields=["page_key", "section_key"], name="uniq_page_section")
         ]
-        indexes = [models.Index(fields=["page_key", "status"])]
+        indexes = [
+            models.Index(fields=["page_key", "status"]),
+            models.Index(fields=["status", "scheduled_publish_at"]),
+        ]
+        permissions = [("publish_pagesection", "Can publish/unpublish/archive page sections")]
 
     def __str__(self) -> str:
         return f"{self.page_key}:{self.section_key}"
@@ -165,3 +185,31 @@ class ContentVersion(models.Model):
 
     def __str__(self) -> str:
         return f"{self.content_type}:{self.object_id} @ {self.edited_at:%Y-%m-%d %H:%M}"
+
+
+class Redirect(TimestampedModel):
+    """A 301 (or 302) from an old public path to a new one, created when a
+    content slug changes so inbound links and search rankings survive
+    (docs/SEO.md "URLs"). The public site / a middleware serves these in a
+    later phase; Phase 4 owns the model + the `create_redirect()` helper
+    that CMS slug edits call.
+    """
+
+    old_path = models.CharField(
+        max_length=400, unique=True, db_index=True,
+        help_text="Path only, leading slash, no host: '/services/old-slug'.",
+    )
+    new_path = models.CharField(max_length=400, help_text="Where 'old_path' should now go.")
+    is_permanent = models.BooleanField(default=True, help_text="301 when true, 302 when false.")
+    note = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        db_table = "pages_redirect"
+        ordering = ["old_path"]
+
+    def __str__(self) -> str:
+        arrow = "301" if self.is_permanent else "302"
+        return f"{self.old_path} -{arrow}-> {self.new_path}"
