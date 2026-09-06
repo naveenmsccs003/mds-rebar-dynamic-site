@@ -63,6 +63,19 @@ UI/Redoc served at `/api/docs/`. Every endpoint documents auth,
 permissions required, parameters, response shape, error codes, and
 pagination behavior.
 
+## Auth endpoints (Phase 3 — implemented)
+Session-cookie auth for the admin SPA, under `/api/v1/auth/`. Full table
+and error codes in `docs/RBAC_DESIGN.md` ("Implementation (Phase 3)").
+```
+GET    /api/v1/auth/csrf/                   (public; sets csrftoken cookie)
+GET    /api/v1/auth/session/               (session; 401 when anonymous)
+POST   /api/v1/auth/login/                 (public, CSRF-protected, throttled; progressive lockout)
+POST   /api/v1/auth/logout/                (session)
+POST   /api/v1/auth/password/change/       (session)
+POST   /api/v1/auth/password/reset/        (public, throttled; no user enumeration)
+POST   /api/v1/auth/password/reset/confirm/ (public; signed token, 24h TTL)
+```
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

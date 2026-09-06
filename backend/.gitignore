@@ -4,8 +4,8 @@ __pycache__/
 .env
 .venv/
 venv/
-staticfiles/
-media/
+/staticfiles/
+/media/
 *.egg-info/
 .pytest_cache/
 .coverage

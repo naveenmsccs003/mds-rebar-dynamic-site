@@ -11,6 +11,9 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]  # fast hashing in tests only
 
+# Password-reset mail lands in `django.core.mail.outbox` for assertions.
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
 # The manifest-hashed static storage requires `collectstatic` to have run
 # first (it looks up a manifest file) — irrelevant for what the test
 # suite verifies, so tests use plain static file serving instead.

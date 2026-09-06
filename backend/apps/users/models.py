@@ -10,6 +10,9 @@ Role assignment uses Django's built-in Group/Permission machinery
 (docs/RBAC_DESIGN.md) rather than a bespoke Role model — `groups` is
 inherited from PermissionsMixin.
 """
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
@@ -90,3 +93,50 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_locked(self) -> bool:
         return bool(self.locked_until and self.locked_until > timezone.now())
+
+    # --- Brute-force lockout (docs/SECURITY.md "AuthN") -----------------
+    # The auth flow in apps.accounts calls these; the thresholds live in
+    # settings (AUTH_LOCKOUT_*) so ops can tune them without a deploy.
+
+    def register_failed_login(self) -> None:
+        """Record one failed password attempt and, once the threshold is
+        crossed, (re)arm a progressive lockout — the window doubles with
+        every further failure, capped at AUTH_LOCKOUT_MAX_SECONDS."""
+        self.failed_login_count = (self.failed_login_count or 0) + 1
+
+        threshold = settings.AUTH_LOCKOUT_THRESHOLD
+        if self.failed_login_count >= threshold:
+            overshoot = self.failed_login_count - threshold  # 0 on the first lock
+            seconds = settings.AUTH_LOCKOUT_BASE_SECONDS * (2**overshoot)
+            seconds = min(seconds, settings.AUTH_LOCKOUT_MAX_SECONDS)
+            self.locked_until = timezone.now() + timedelta(seconds=seconds)
+
+        self.save(update_fields=["failed_login_count", "locked_until", "updated_at"])
+
+    def register_successful_login(self, ip_address: str | None = None) -> None:
+        """Clear the failure counter/lock and stamp the login metadata."""
+        self.failed_login_count = 0
+        self.locked_until = None
+        self.last_login_ip = ip_address
+        self.last_login = timezone.now()
+        self.save(
+            update_fields=[
+                "failed_login_count",
+                "locked_until",
+                "last_login_ip",
+                "last_login",
+                "updated_at",
+            ]
+        )
+
+    def clear_lockout(self) -> None:
+        """Admin action / support override: unlock without a login."""
+        self.failed_login_count = 0
+        self.locked_until = None
+        self.save(update_fields=["failed_login_count", "locked_until", "updated_at"])
+
+    @property
+    def lockout_seconds_remaining(self) -> int:
+        if not self.is_locked:
+            return 0
+        return int((self.locked_until - timezone.now()).total_seconds()) + 1

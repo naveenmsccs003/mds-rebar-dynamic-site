@@ -123,6 +123,65 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Argon2 preferred, PBKDF2 kept as an accepted fallback so existing
+# hashes still verify (docs/SECURITY.md "AuthN"). Argon2 needs
+# `argon2-cffi` (requirements/base.txt); if it is ever unavailable Django
+# still starts and simply uses PBKDF2.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+]
+
+# --- Sessions & CSRF (docs/SECURITY.md, docs/API_DESIGN.md "Auth") -------
+# The admin SPA authenticates with the Django session cookie (httpOnly,
+# never readable by JS) plus CSRF protection on every state-changing
+# request — no bearer token in localStorage. `*_SECURE` is left False in
+# base so plain-HTTP local dev works; staging/production override it.
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=60 * 60 * 12)  # 12h
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True  # sliding expiry: active users stay signed in
+
+CSRF_COOKIE_HTTPONLY = False  # the SPA must read it to echo back as X-CSRFToken
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
+
+X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# --- Brute-force protection (docs/SECURITY.md "AuthN", docs/RBAC_DESIGN.md)
+# Per-account progressive lockout enforced against apps.users.User's
+# `failed_login_count` / `locked_until` fields, on top of the Redis-backed
+# `login` DRF throttle scope (per-IP). After THRESHOLD consecutive
+# failures the account locks for BASE_SECONDS, doubling on each further
+# failed attempt up to MAX_SECONDS.
+AUTH_LOCKOUT_THRESHOLD = env.int("AUTH_LOCKOUT_THRESHOLD", default=5)
+AUTH_LOCKOUT_BASE_SECONDS = env.int("AUTH_LOCKOUT_BASE_SECONDS", default=60)
+AUTH_LOCKOUT_MAX_SECONDS = env.int("AUTH_LOCKOUT_MAX_SECONDS", default=60 * 60)
+
+# --- Email --------------------------------------------------------------
+# Password-reset mail (apps.accounts) and notifications (apps.notifications).
+# Base defaults to console output; real SMTP is configured from env in
+# staging/production. Never fatal to a request — see apps.notifications.
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@mdsrebar.example")
+
+# Where password-reset links point (the React admin route that posts the
+# token back to /api/v1/auth/password-reset/confirm/).
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
+PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=60 * 60 * 24)  # 24h
+
 # --- i18n / timezone --------------------------------------------------------
 # All timestamps are stored in UTC and converted to local time only for
 # display (docs/TARGET_ARCHITECTURE.md §43 future-languages readiness).
@@ -143,10 +202,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --- REST framework ---------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "config.api_authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "config.api_renderers.EnvelopeJSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,

@@ -6,12 +6,18 @@ docs/API_DESIGN.md:
 
 Unexpected (non-DRF) exceptions are logged with the request ID and turned
 into a generic INTERNAL_ERROR — the client never sees a stack trace.
+
+An `APIException` subclass may set:
+  * ``envelope_code``  — overrides the status-derived error code
+    (e.g. ``"INVALID_CREDENTIALS"``, ``"ACCOUNT_LOCKED"``);
+  * ``envelope_extra`` — a dict merged into the ``error`` object
+    (e.g. ``{"retry_after": 300}``).
 """
 import logging
 
-from rest_framework.views import exception_handler as drf_exception_handler
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import exception_handler as drf_exception_handler
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +28,7 @@ _CODE_BY_STATUS = {
     404: "NOT_FOUND",
     405: "METHOD_NOT_ALLOWED",
     409: "CONFLICT",
+    423: "ACCOUNT_LOCKED",
     429: "RATE_LIMITED",
 }
 
@@ -34,9 +41,7 @@ def envelope_exception_handler(exc, context):
         # unexpected server error: log it, never expose it.
         request = context.get("request")
         request_id = getattr(request, "request_id", "-")
-        logger.exception(
-            "Unhandled exception", extra={"request_id": request_id}
-        )
+        logger.exception("Unhandled exception", extra={"request_id": request_id})
         return Response(
             {
                 "success": False,
@@ -49,18 +54,25 @@ def envelope_exception_handler(exc, context):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    code = _CODE_BY_STATUS.get(response.status_code, "ERROR")
+    code = getattr(exc, "envelope_code", None) or _CODE_BY_STATUS.get(
+        response.status_code, "ERROR"
+    )
     fields = {}
     message = "Request failed."
 
     if isinstance(response.data, dict):
         fields = {k: v for k, v in response.data.items() if k != "detail"}
-        message = str(response.data.get("detail", message))
+        if "detail" in response.data:
+            message = str(response.data["detail"])
+        elif fields:
+            message = "Validation failed."
     elif isinstance(response.data, list):
         message = "; ".join(str(item) for item in response.data)
 
-    response.data = {
-        "success": False,
-        "error": {"code": code, "message": message, "fields": fields},
-    }
+    error = {"code": code, "message": message, "fields": fields}
+    extra = getattr(exc, "envelope_extra", None)
+    if extra:
+        error.update(extra)
+
+    response.data = {"success": False, "error": error}
     return response

@@ -20,3 +20,10 @@ SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
+
+# --- Email ------------------------------------------------------------
+# Password-reset (apps.accounts) and notification mail must go over real
+# SMTP in production — never the console backend inherited from base.py.
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+if not env("EMAIL_HOST", default=""):  # noqa: F405
+    raise RuntimeError("EMAIL_HOST must be set in production (password-reset mail).")

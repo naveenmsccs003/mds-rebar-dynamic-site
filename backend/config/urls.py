@@ -8,7 +8,7 @@ domain app owns its own `urls.py`, included here (or from
 shape every phase.
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from . import health
@@ -19,4 +19,5 @@ urlpatterns = [
     path("ready/", health.ready, name="ready"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="api-docs"),
+    path("api/v1/", include("config.api_v1")),
 ]

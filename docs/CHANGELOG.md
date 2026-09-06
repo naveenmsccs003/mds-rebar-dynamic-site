@@ -31,3 +31,29 @@
   — verified against both SQLite and a real PostgreSQL 16 instance.
   `docs/DATABASE_DESIGN.md` updated with the handful of deliberate
   deviations made during implementation.
+- Phase 3 (Authentication + RBAC): session-cookie auth API for the admin
+  SPA under `/api/v1/auth/` (`csrf`, `session`, `login`, `logout`,
+  `password/change`, `password/reset`, `password/reset/confirm`) — no
+  bearer tokens; login is CSRF-protected and throttled. Per-account
+  progressive brute-force lockout (`AUTH_LOCKOUT_*` settings) on top of
+  the per-IP `login` throttle, with a full audit trail of auth events.
+  Argon2 password hashing (PBKDF2 fallback); hardened session/CSRF
+  cookies (httpOnly, `SameSite=Lax`, sliding 12 h expiry,
+  `*_SECURE` in staging/prod); password reset via Django's signed-token
+  generator (24 h TTL) with console email in dev / SMTP in staging+prod.
+  Reusable DRF permission classes in `apps.permissions`
+  (`HasModelPermission`, `HasRequiredPermissions`, `IsActiveUser`,
+  `IsAuditReader`, `ReadOnly`) and a `permissions_payload` helper. The
+  ten RBAC roles get their Django permissions from a declarative map
+  applied by the idempotent `manage.py sync_roles` command
+  (`apps.roles.role_permissions`). Response envelope from
+  `docs/API_DESIGN.md` now applied automatically via
+  `EnvelopeJSONRenderer` + typed error codes. 43 new backend tests
+  (auth flow, lockout, CSRF, password reset, permission classes, role
+  seeding). `docs/RBAC_DESIGN.md` updated with the implemented surface.
+- Fixed: `backend/.gitignore` had a bare `media/` rule that also matched
+  `backend/apps/media/`, so the entire `apps.media` app (`MediaAsset` +
+  migration `0001`) was never committed in Phase 1/2 despite being in
+  `INSTALLED_APPS` with ~15 FKs pointing at `media.MediaAsset` — a fresh
+  clone could not boot Django. Rules anchored (`/media/`,
+  `/staticfiles/`) and the app added to version control.
