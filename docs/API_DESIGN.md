@@ -100,6 +100,29 @@ Public surface — no auth, read-only, published content only:
 GET    /api/v1/pages/{page_key}/            published PageSections, ordered by display_order
 ```
 
+## Service endpoints (Phase 6 — implemented)
+Public — no auth, PUBLISHED services only:
+```
+GET    /api/v1/services/                    paginated; ?technology=<slug>  ?q=<text>
+GET    /api/v1/services/{slug}/             full record + capabilities / process_steps / faqs / technology
+```
+Admin — session auth + `services.*_service` permissions:
+```
+GET/POST         /api/v1/admin/services/                 (view/add_service; ?status=)
+GET/PATCH/DELETE /api/v1/admin/services/{id}/            (view/change/delete_service)
+POST  /api/v1/admin/services/{id}/transition/            body {to, note}; change_service,
+                                                          publish_service for →published / un-publish / archive
+GET   /api/v1/admin/services/{id}/versions/              (view_service; paginated, newest first)
+POST  /api/v1/admin/services/{id}/versions/{vid}/rollback/  (change_service)
+```
+`status` is read-only on the admin serializer (moves via `transition/`);
+`long_description` is HTML-sanitised on write. The three child lists
+(`capabilities`, `process_steps`, `faqs`) use replace-all semantics — a
+list supplied in the body fully replaces that relation; a list omitted is
+left untouched. Workflow + versioning are the shared
+`apps.pages.api_mixins` behaviour, reused by every content admin viewset
+from here on.
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

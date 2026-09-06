@@ -43,7 +43,7 @@ Every component: keyboard operable, visible focus ring, correct ARIA
 role/label, sufficient color contrast (WCAG 2.2 AA), and documented
 loading/empty/error states where it renders remote data.
 
-### Implemented so far (Phase 5)
+### Implemented so far (Phase 5–6)
 `Button`, `LoadingState`, `EmptyState`, `ErrorState` (Phase 1) plus
 `Container` (max-width + gutters), `Section` (full-bleed band with
 `tone="default|muted|dark"`), `Card`, `Breadcrumbs`, `Skeleton`,
@@ -56,9 +56,16 @@ in `src/index.css`. The homepage/about/legal pages render through
 `features/cms/` — `SectionRenderer` maps `PageSection.section_key` to a
 section component (`hero`, `prose`, `cta`, `card_grid`, `stat_list`, with
 a safe fallback) in the API's `display_order`, so editors reorder/hide
-sections from the CMS without a frontend deploy. Remaining components
-(forms, Table, Modal, Tabs, FileUpload, admin `ListPageTemplate`, …)
-land with the features that first need them (Phases 6–12).
+sections from the CMS without a frontend deploy.
+
+`ServiceListPage` + `ServiceDetailTemplate` (Phase 6) are the first
+`features/` templates — every service renders through the one
+`ServiceDetailTemplate` from its DB record (breadcrumb → hero → overview
+→ capabilities → process → business value → technology → standards →
+deliverables → output formats → FAQs → quote CTA; each section
+conditional on data). Remaining components (forms, Table, Modal, Tabs,
+FileUpload, admin `ListPageTemplate`, …) land with the features that
+first need them (Phases 7–12).
 
 ## Page templates (reused, not duplicated per content item)
 - `ServiceDetailTemplate` — renders any service from its DB record

@@ -3,16 +3,18 @@ import { createBrowserRouter } from "react-router-dom";
 import { AboutPage } from "../features/about/AboutPage";
 import { HomePage } from "../features/home/HomePage";
 import { LegalPage } from "../features/legal/LegalPage";
+import { ServiceDetailTemplate } from "../features/services/ServiceDetailTemplate";
+import { ServiceListPage } from "../features/services/ServiceListPage";
 import { PublicLayout } from "../layouts/PublicLayout";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 
 /**
- * Route table matching the public navigation in the spec (§7). Phase 5
- * fills in the CMS-driven pages (home, about, legal/*, 404); the
+ * Route table matching the public navigation in the spec (§7). Filled in
+ * by phase: home/about/legal/404 (Phase 5), services (Phase 6). The
  * remaining routes stay `PlaceholderPage` until their owning phase
- * (services → 6, portfolio/news/blogs/events → 7, careers → 8,
- * contact/quote → 9, search → 11, admin/logins → 3/12 frontend work).
+ * (portfolio/news/blogs/events → 7, careers → 8, contact/quote → 9,
+ * search → 11, admin/logins → later frontend work).
  *
  * Services/Portfolio/News/Blogs/Events detail routes use a single
  * `:slug` param feeding one reusable template component each (spec §10 —
@@ -25,8 +27,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "about", element: <AboutPage /> },
-      { path: "services", element: <PlaceholderPage title="Services" /> },
-      { path: "services/:slug", element: <PlaceholderPage title="Service Detail" /> },
+      { path: "services", element: <ServiceListPage /> },
+      { path: "services/:slug", element: <ServiceDetailTemplate /> },
       { path: "portfolio", element: <PlaceholderPage title="Portfolio" /> },
       { path: "portfolio/:slug", element: <PlaceholderPage title="Project Detail" /> },
       { path: "resources", element: <PlaceholderPage title="Resources" /> },

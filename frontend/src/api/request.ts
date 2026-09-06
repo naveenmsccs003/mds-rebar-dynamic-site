@@ -60,7 +60,7 @@ async function unwrap<T>(promise: Promise<{ data: unknown }>): Promise<T> {
   }
 }
 
-export function apiGet<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+export function apiGet<T>(url: string, params?: object): Promise<T> {
   return unwrap<T>(apiClient.get(url, { params }));
 }
 

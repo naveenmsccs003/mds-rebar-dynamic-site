@@ -130,3 +130,30 @@
     now, build-time prerendering of the marketing routes planned for the
     deploy pipeline (Phase 15). `docs/UI_DESIGN_SYSTEM.md` updated with
     the implemented components.
+- Phase 6 (Services): one reusable data model + one reusable API + one
+  reusable frontend template render every service (spec §10).
+  - Reusable viewset behaviour factored into `apps.pages.api_mixins`:
+    `WorkflowViewSetMixin` (`transition` / `versions` /
+    `versions/{id}/rollback` actions, generic over `type(obj)`) and
+    `VersionedViewSetMixin` (snapshot on every write; stamps `updated_by`
+    / repoints `current_version` when the model has them). `PageSection`'s
+    viewset was refactored onto them.
+  - Service API: public `GET /api/v1/services/` (paginated,
+    `?technology=<slug>`, `?q=`) and `GET /api/v1/services/{slug}/` —
+    PUBLISHED only, with nested capabilities / process steps / FAQs /
+    technology. Admin `/api/v1/admin/services/` CRUD + `transition/` +
+    `versions/` + rollback, gated by `services.*_service` /
+    `services.publish_service`. `long_description` HTML-sanitised on
+    write; `status` read-only (moves via `transition`); the three child
+    lists use replace-all semantics (supplied → replaces, omitted →
+    untouched). 14 backend tests.
+  - Frontend `features/services/`: `useServices()` / `useService(slug)`
+    hooks; `ServiceListPage` (card grid); `ServiceDetailTemplate` —
+    breadcrumb → hero → overview (RichText) → capabilities → process →
+    business value → technology → standards → deliverables → output
+    formats → FAQs → quote CTA, all sections conditional on data. A 404
+    from the detail endpoint renders the NotFound page. Routes
+    `/services` + `/services/:slug` wired in. 8 frontend tests.
+  - `api/request.ts` `apiGet` param type loosened to `object`.
+  - Backend suite: 137 passed, 1 skipped. Frontend: `lint` / `test`
+    (33 pass) / `build` green. `docs/API_DESIGN.md` updated.

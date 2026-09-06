@@ -11,4 +11,5 @@ app_name = "api_v1"
 urlpatterns = [
     path("auth/", include("apps.accounts.urls")),
     path("", include("apps.pages.urls")),
+    path("", include("apps.services.urls")),
 ]
