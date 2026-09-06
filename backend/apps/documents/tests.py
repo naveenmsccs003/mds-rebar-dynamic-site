@@ -155,6 +155,9 @@ def test_upload_ticket_then_put_then_complete_then_scan(api, uploader):
 
     complete = api.post(f"/api/v1/admin/documents/{doc_uuid}/complete/")
     assert complete.status_code == 200
+    completed = complete.json()["data"]
+    # the pk is exposed so the client can link the file to a MediaAsset
+    assert completed["id"] == Document.objects.get(uuid=doc_uuid).pk
 
     doc = Document.objects.get(uuid=doc_uuid)
     assert doc.status == ProcessingStatus.PROCESSED  # eager scan

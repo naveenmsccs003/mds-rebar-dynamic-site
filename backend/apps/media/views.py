@@ -10,6 +10,7 @@ There is no public media list endpoint — media assets are referenced
 from __future__ import annotations
 
 from rest_framework import viewsets
+from rest_framework.filters import SearchFilter
 
 from apps.pages.api_mixins import crud_perms
 from apps.permissions.permissions import HasRequiredPermissions
@@ -23,3 +24,7 @@ class MediaAssetAdminViewSet(viewsets.ModelViewSet):
     serializer_class = MediaAssetAdminSerializer
     permission_classes = [HasRequiredPermissions]
     required_permissions_map = crud_perms("media", "mediaasset")
+    # `?search=` over the human-entered metadata — the media picker needs
+    # it to find an asset by name in a library that outgrows one page.
+    filter_backends = [SearchFilter]
+    search_fields = ["alt_text", "caption"]

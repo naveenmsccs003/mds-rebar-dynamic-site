@@ -626,3 +626,26 @@
   - +4 vitest (lead-perm mapping + status/assignee PATCH + note append +
     résumé link) → 121; +1 Playwright admin journey (assign an enquiry →
     add an internal note). `lint` / `build` green.
+- **A5 — Media library + picker.**
+  - Backend: `id` added to `DocumentSerializer` (so a client that just
+    finished the declared-upload flow can link the file to a `MediaAsset`
+    without a uuid→pk lookup); `?search=` (`SearchFilter` over
+    `alt_text` / `caption`) on `MediaAssetAdminViewSet` for the picker.
+    +1 test / +1 assertion → 273 passed, 1 skipped.
+  - `features/admin-media/`: `upload.ts` runs the three-step
+    declared-upload flow (`POST …/documents/upload/` → `PUT` the bytes to
+    the ticket URL, a plain `fetch` since the target may be S3 → `POST
+    …/{uuid}/complete/`); `useUploadMedia` chains that into a
+    `MediaAsset` create. `MediaLibraryPage` (`/admin/media`, Library nav)
+    — searchable thumbnail grid, upload, edit alt/caption, delete.
+    `MediaPicker` — a form field holding a `MediaAsset` id (thumbnail +
+    "Choose"/"Change"/"Clear"), backed by `MediaPickerDialog` (library
+    grid + inline upload).
+  - Retrofit: the catalogue image FKs now use `<MediaPicker>` instead of
+    a numeric id input — Services `hero_image` / `icon` / `og_image`,
+    News `featured_image`, Resources `thumbnail` (Resources `file`
+    remains a `Document` id — it's a downloadable file, not a media
+    asset).
+  - +3 vitest (upload orchestration + library alt-text edit + picker
+    swap) → 124; +1 Playwright admin journey (pick a library image for a
+    service hero). `lint` / `build` green.

@@ -141,6 +141,18 @@ export const adminRoute: RouteObject = {
           ),
         },
 
+        // --- media library (A5) ---
+        {
+          path: "media",
+          element: gated(
+            "media.view_mediaasset",
+            lazyRoute(
+              () => import("../features/admin-media/MediaLibraryPage"),
+              (m) => m.MediaLibraryPage,
+            ),
+          ),
+        },
+
         {
           path: "*",
           element: lazyRoute(

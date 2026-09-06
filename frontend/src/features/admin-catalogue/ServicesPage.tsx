@@ -1,4 +1,5 @@
 import type { Column } from "../../components/admin/AdminDataTable";
+import { MediaPicker } from "../admin-media/MediaPicker";
 import { Area, Text } from "./formHelpers";
 import { csvToList, listToCsv, numOrNull } from "./formUtils";
 import { WorkflowResourcePage } from "./WorkflowResourcePage";
@@ -32,6 +33,8 @@ export function ServicesPage() {
         deliverables: row?.deliverables ?? "",
         display_order: row?.display_order ?? 0,
         hero_image: row?.hero_image ?? "",
+        icon: row?.icon ?? "",
+        og_image: row?.og_image ?? "",
         technology: listToCsv(row?.technology),
         seo_title: row?.seo_title ?? "",
         seo_description: row?.seo_description ?? "",
@@ -45,6 +48,8 @@ export function ServicesPage() {
         deliverables: v.deliverables,
         display_order: numOrNull(v.display_order) ?? 0,
         hero_image: numOrNull(v.hero_image),
+        icon: numOrNull(v.icon),
+        og_image: numOrNull(v.og_image),
         technology: csvToList(v.technology),
         seo_title: v.seo_title,
         seo_description: v.seo_description,
@@ -72,12 +77,25 @@ export function ServicesPage() {
             set={set}
             errors={e}
           />
-          <Text
+          <MediaPicker
             name="hero_image"
-            label="Hero image — media asset id (media picker in A5)"
-            type="number"
-            values={v}
-            set={set}
+            label="Hero image"
+            value={numOrNull(v.hero_image)}
+            onChange={(id) => set("hero_image", id ?? "")}
+            errors={e}
+          />
+          <MediaPicker
+            name="icon"
+            label="Icon"
+            value={numOrNull(v.icon)}
+            onChange={(id) => set("icon", id ?? "")}
+            errors={e}
+          />
+          <MediaPicker
+            name="og_image"
+            label="Social share image"
+            value={numOrNull(v.og_image)}
+            onChange={(id) => set("og_image", id ?? "")}
             errors={e}
           />
           <Text name="seo_title" label="SEO title" values={v} set={set} errors={e} />

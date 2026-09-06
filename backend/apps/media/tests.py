@@ -80,6 +80,18 @@ def test_media_asset_rejects_private_or_double_wrapped_document(api, editor):
 
 
 @pytest.mark.django_db
+def test_media_list_is_searchable_by_metadata(api, editor):
+    api.force_login(editor)
+    MediaAsset.objects.create(document=public_image(), alt_text="Steel bridge deck")
+    MediaAsset.objects.create(document=public_image(), alt_text="Office team photo")
+
+    resp = api.get(ADMIN, {"search": "bridge"})
+    assert resp.status_code == 200
+    results = resp.json()["data"]["results"]
+    assert [r["alt_text"] for r in results] == ["Steel bridge deck"]
+
+
+@pytest.mark.django_db
 def test_media_url_is_null_before_scan_completes(api, editor):
     api.force_login(editor)
     doc = public_image()

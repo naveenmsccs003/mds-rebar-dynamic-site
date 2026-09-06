@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Button } from "../../components/Button/Button";
 import type { Column } from "../../components/admin/AdminDataTable";
+import { MediaPicker } from "../admin-media/MediaPicker";
 import { SimpleResourcePage } from "../admin-shared/SimpleResourcePage";
 import { fieldErrorsFromApi, formErrorFromApi } from "../shared/publicForm";
 import { Area, Bool, Select, Text } from "./formHelpers";
@@ -39,12 +40,13 @@ function ResourceForm({ row, onSaved }: { row: ResourceRow | null; onSaved: () =
     access_type: row?.access_type ?? "public",
     is_published: row?.is_published ?? false,
     file: row?.file ?? "",
+    thumbnail: row?.thumbnail ?? "",
   });
   const set = (k: string, val: unknown) => setV((s) => ({ ...s, [k]: val }));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const body = { ...v, file: numOrNull(v.file) };
+    const body = { ...v, file: numOrNull(v.file), thumbnail: numOrNull(v.thumbnail) };
     if (row) update.mutate({ id: row.id, body }, { onSuccess: onSaved });
     else create.mutate(body, { onSuccess: onSaved });
   }
@@ -59,7 +61,14 @@ function ResourceForm({ row, onSaved }: { row: ResourceRow | null; onSaved: () =
       <Select name="category" label="Category" options={CATEGORIES} values={v} set={set} errors={err} />
       <Area name="description" label="Description" rows={3} values={v} set={set} errors={err} />
       <Text name="external_url" label="External URL" values={v} set={set} errors={err} />
-      <Text name="file" label="Document id (media picker in A5)" type="number" values={v} set={set} errors={err} />
+      <Text name="file" label="Document id (downloadable file)" type="number" values={v} set={set} errors={err} />
+      <MediaPicker
+        name="thumbnail"
+        label="Thumbnail"
+        value={numOrNull(v.thumbnail)}
+        onChange={(id) => set("thumbnail", id ?? "")}
+        errors={err}
+      />
       <Select
         name="access_type"
         label="Access"

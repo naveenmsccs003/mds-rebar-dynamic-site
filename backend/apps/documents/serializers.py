@@ -22,8 +22,12 @@ class UploadRequestSerializer(serializers.Serializer):
 class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
+        # `id` is here so a client that has just finished the declared
+        # upload flow can link the new file to a `MediaAsset`
+        # (`POST /api/v1/admin/media/` takes the Document pk) without a
+        # second lookup by uuid.
         fields = [
-            "uuid", "original_filename", "content_type", "size_bytes", "checksum",
+            "id", "uuid", "original_filename", "content_type", "size_bytes", "checksum",
             "visibility", "status", "created_at", "updated_at",
         ]
         read_only_fields = fields

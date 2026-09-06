@@ -258,6 +258,82 @@ test("inbox: assign an enquiry, then add an internal note", async ({ page }) => 
   await expect(drawer.getByText("Emailed the Qatar team.")).toBeVisible();
 });
 
+test("media: pick a library image for a service's hero image", async ({ page }) => {
+  const editor = {
+    ...EDITOR,
+    permissions: [
+      "services.view_service",
+      "services.change_service",
+      "media.view_mediaasset",
+    ],
+  };
+  const service = {
+    id: 9,
+    name: "Rebar Detailing",
+    slug: "rebar-detailing",
+    short_description: "",
+    long_description: "",
+    business_value: "",
+    standards_codes: "",
+    deliverables: "",
+    output_formats: "",
+    display_order: 0,
+    hero_image: null as number | null,
+    icon: null,
+    og_image: null,
+    technology: [] as string[],
+    status: "draft",
+    allowed_transitions: ["review"],
+    seo_title: "",
+    seo_description: "",
+    seo_keywords: "",
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+  };
+  const image = {
+    id: 5,
+    document: 10,
+    document_status: "processed",
+    url: "https://cdn.example/cage.png",
+    alt_text: "Reinforcement cage",
+    caption: "",
+    width: 1200,
+    height: 800,
+    created_at: "2026-09-01T00:00:00Z",
+  };
+  let patched: Record<string, unknown> | undefined;
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(editor),
+    "GET /api/v1/admin/services": (route) => route.fulfill({ json: ok(paginated([service])) }),
+    "GET /api/v1/admin/services/9": (route) => route.fulfill({ json: ok(service) }),
+    "GET /api/v1/admin/services/9/versions": ok(paginated([])),
+    "GET /api/v1/admin/media": (route) => route.fulfill({ json: ok(paginated([image])) }),
+    "GET /api/v1/admin/media/5": ok(image),
+    "PATCH /api/v1/admin/services/9": async (route) => {
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: ok({ ...service, hero_image: 5 }) });
+    },
+  });
+
+  await page.goto("/admin/services");
+  await page.getByText("Rebar Detailing").click();
+
+  const drawer = page.getByRole("dialog", { name: "Edit" });
+  await drawer
+    .getByRole("group", { name: "Hero image" })
+    .getByRole("button", { name: "Choose image" })
+    .click();
+
+  const picker = page.getByRole("dialog", { name: "Choose an image" });
+  await picker.getByRole("button", { name: /Reinforcement cage/ }).click();
+  await expect(picker).toBeHidden();
+
+  await drawer.getByRole("button", { name: "Save changes" }).click();
+  await expect(drawer).toBeHidden();
+  expect(patched?.hero_image).toBe(5);
+});
+
 test("a stale /admin deep link after logout returns to login", async ({ page }) => {
   await stubApi(page, {
     "GET /api/v1/auth/session": (route) => route.fulfill({ status: 401, json: err("x", "x") }),

@@ -1,4 +1,5 @@
 import type { Column } from "../../components/admin/AdminDataTable";
+import { MediaPicker } from "../admin-media/MediaPicker";
 import { Area, Text } from "./formHelpers";
 import { csvToList, listToCsv, numOrNull } from "./formUtils";
 import { WorkflowResourcePage } from "./WorkflowResourcePage";
@@ -29,6 +30,7 @@ export function NewsPage() {
         summary: row?.summary ?? "",
         content: row?.content ?? "",
         category: row?.category ?? "",
+        featured_image: row?.featured_image ?? "",
         tags: listToCsv(row?.tags),
         publish_date: row?.publish_date?.slice(0, 16) ?? "",
         seo_title: row?.seo_title ?? "",
@@ -40,6 +42,7 @@ export function NewsPage() {
         summary: v.summary,
         content: v.content,
         category: v.category,
+        featured_image: numOrNull(v.featured_image),
         tags: csvToList(v.tags).map((s) => numOrNull(s)).filter((n): n is number => n !== null),
         publish_date: v.publish_date ? String(v.publish_date) : null,
         seo_title: v.seo_title,
@@ -58,6 +61,13 @@ export function NewsPage() {
             rows={8}
             values={v}
             set={set}
+            errors={e}
+          />
+          <MediaPicker
+            name="featured_image"
+            label="Featured image"
+            value={numOrNull(v.featured_image)}
+            onChange={(id) => set("featured_image", id ?? "")}
             errors={e}
           />
           <Text name="tags" label="Tag ids (comma-separated)" values={v} set={set} errors={e} />
