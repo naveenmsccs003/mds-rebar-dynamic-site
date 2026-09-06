@@ -75,6 +75,43 @@ export const adminRoute: RouteObject = {
           ),
         },
 
+        // --- catalogue (A3) ---
+        {
+          path: "services",
+          element: gated(
+            "services.view_service",
+            lazyRoute(() => import("../features/admin-catalogue/ServicesPage"), (m) => m.ServicesPage),
+          ),
+        },
+        {
+          path: "portfolio",
+          element: gated(
+            "portfolio.view_project",
+            lazyRoute(() => import("../features/admin-catalogue/PortfolioPage"), (m) => m.PortfolioPage),
+          ),
+        },
+        {
+          path: "news",
+          element: gated(
+            "news.view_news",
+            lazyRoute(() => import("../features/admin-catalogue/NewsPage"), (m) => m.NewsPage),
+          ),
+        },
+        {
+          path: "resources",
+          element: gated(
+            "resources.view_resource",
+            lazyRoute(() => import("../features/admin-catalogue/ResourcesPage"), (m) => m.ResourcesPage),
+          ),
+        },
+        {
+          path: "careers",
+          element: gated(
+            "careers.view_jobposting",
+            lazyRoute(() => import("../features/admin-catalogue/CareersPage"), (m) => m.CareersPage),
+          ),
+        },
+
         {
           path: "*",
           element: lazyRoute(

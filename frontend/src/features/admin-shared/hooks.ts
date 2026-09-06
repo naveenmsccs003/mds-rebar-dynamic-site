@@ -12,7 +12,16 @@ import {
 } from "@tanstack/react-query";
 
 import type { Paginated } from "../../api/envelope";
-import { adminCreate, adminList, adminRemove, adminUpdate } from "./crud";
+import {
+  adminCreate,
+  adminGet,
+  adminList,
+  adminRemove,
+  adminRollback,
+  adminTransition,
+  adminUpdate,
+  adminVersions,
+} from "./crud";
 
 export function makeCrudHooks<TRow, TWrite>(resource: string, basePath: string) {
   const listKey = (params: Record<string, string>) => ["admin", resource, "list", params] as const;
@@ -50,4 +59,56 @@ export function makeCrudHooks<TRow, TWrite>(resource: string, basePath: string) 
   }
 
   return { useList, useCreate, useUpdate, useRemove };
+}
+
+/**
+ * Same as `makeCrudHooks` plus the publishing-workflow calls, for
+ * services / portfolio / news / cms-sections-style resources.
+ */
+export function makeWorkflowHooks<TRow extends { id: number }, TWrite>(
+  resource: string,
+  basePath: string,
+) {
+  const crud = makeCrudHooks<TRow, TWrite>(resource, basePath);
+
+  function useDetail(id: number | null) {
+    return useQuery<TRow>({
+      queryKey: ["admin", resource, "detail", id],
+      queryFn: () => adminGet<TRow>(basePath, id!),
+      enabled: id != null,
+    });
+  }
+
+  function useInvalidate() {
+    const qc = useQueryClient();
+    return () => qc.invalidateQueries({ queryKey: ["admin", resource] });
+  }
+
+  function useTransition() {
+    const invalidate = useInvalidate();
+    return useMutation({
+      mutationFn: ({ id, to, note }: { id: number; to: string; note: string }) =>
+        adminTransition<TRow>(basePath, id, to, note),
+      onSuccess: invalidate,
+    });
+  }
+
+  function useVersions(id: number | null) {
+    return useQuery({
+      queryKey: ["admin", resource, "versions", id],
+      queryFn: () => adminVersions(basePath, id!),
+      enabled: id != null,
+    });
+  }
+
+  function useRollback() {
+    const invalidate = useInvalidate();
+    return useMutation({
+      mutationFn: ({ id, versionId }: { id: number; versionId: number }) =>
+        adminRollback<TRow>(basePath, id, versionId),
+      onSuccess: invalidate,
+    });
+  }
+
+  return { ...crud, useDetail, useTransition, useVersions, useRollback };
 }

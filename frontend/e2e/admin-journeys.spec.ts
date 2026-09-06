@@ -118,6 +118,85 @@ test("CMS: open a section, submit it for review, see version history", async ({ 
   await expect(drawer).toBeHidden();
 });
 
+test("catalogue: create a service, then publish it via the workflow bar", async ({ page }) => {
+  const publisher = {
+    ...EDITOR,
+    permissions: [
+      "services.view_service",
+      "services.add_service",
+      "services.change_service",
+      "services.publish_service",
+    ],
+  };
+  const draft = {
+    id: 9,
+    name: "Estimation",
+    slug: "estimation",
+    short_description: "",
+    long_description: "",
+    business_value: "",
+    standards_codes: "",
+    deliverables: "",
+    output_formats: "",
+    display_order: 0,
+    hero_image: null,
+    icon: null,
+    og_image: null,
+    technology: [],
+    status: "approved",
+    allowed_transitions: ["draft", "published", "archived"],
+    seo_title: "",
+    seo_description: "",
+    seo_keywords: "",
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+  };
+  let created = false;
+
+  await stubApi(page, { "GET /api/v1/auth/session": ok(publisher) });
+  // richer stateful stub than the helper supports — registered after
+  // stubApi so this more specific route wins.
+  await page.route("**/api/v1/admin/services/**", (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    if (req.method() === "GET" && url.pathname.endsWith("/services/")) {
+      return route.fulfill({
+        json: ok({ count: created ? 1 : 0, next: null, previous: null, results: created ? [draft] : [] }),
+      });
+    }
+    if (req.method() === "POST" && url.pathname.endsWith("/services/")) {
+      created = true;
+      return route.fulfill({ status: 201, json: ok(draft) });
+    }
+    if (url.pathname.endsWith("/9/versions/")) {
+      return route.fulfill({ json: ok({ count: 0, next: null, previous: null, results: [] }) });
+    }
+    if (url.pathname.endsWith("/9/transition/")) {
+      return route.fulfill({ json: ok({ ...draft, status: "published", allowed_transitions: ["draft", "archived"] }) });
+    }
+    return route.fulfill({ status: 599, body: `unmatched ${req.method()} ${url.pathname}` });
+  });
+
+  await page.goto("/admin/services");
+  await page.getByRole("button", { name: "New" }).click();
+  const drawer = page.getByRole("dialog", { name: "New" });
+  await drawer.getByLabel("Name", { exact: true }).fill("Estimation");
+  await drawer.getByLabel("Slug", { exact: true }).fill("estimation");
+  await drawer.getByRole("button", { name: "Create" }).click();
+  await expect(drawer).toBeHidden();
+
+  // reload the list — the new row is now there; open it and publish
+  await page.goto("/admin/services");
+  const row = page.getByRole("cell", { name: "Estimation", exact: true });
+  await expect(row).toBeVisible({ timeout: 10_000 });
+  await row.click();
+
+  const editDrawer = page.getByRole("dialog", { name: "Edit" });
+  await expect(editDrawer.getByText("Status:")).toBeVisible();
+  await editDrawer.getByRole("button", { name: "Publish" }).click();
+  await expect(editDrawer).toBeHidden();
+});
+
 test("a stale /admin deep link after logout returns to login", async ({ page }) => {
   await stubApi(page, {
     "GET /api/v1/auth/session": (route) => route.fulfill({ status: 401, json: err("x", "x") }),

@@ -584,3 +584,19 @@
   - +15 vitest → 114; +1 Playwright admin journey (open a section →
     submit for review → version history). `lint` / `build` green; public
     bundle unchanged.
+- **A3 — Catalogue content.**
+  - `features/admin-shared/`: `makeWorkflowHooks` (CRUD + detail +
+    transition/versions/rollback), `SimpleResourcePage` promoted here
+    from admin-cms.
+  - `features/admin-catalogue/`: `WorkflowResourcePage` (table + drawer
+    with a fields form + `WorkflowBar` + `VersionHistoryPanel`) drives
+    `ServicesPage`, `PortfolioPage`, `NewsPage`; `ResourcesPage` and
+    `CareersPage` use `SimpleResourcePage`. Small field helpers
+    (`Text`/`Area`/`Bool`/`Select` + csv<->list / num<->null utils);
+    relational fields (technology, tags, services) are comma-separated
+    slug/id inputs and image FKs are numeric-id inputs until the A5
+    media picker. Routes `/admin/{services,portfolio,news,resources,
+    careers}` behind `<RequirePermission>`.
+  - +3 vitest (service transition + ServicesPage create-body + CareersPage)
+    → 117; +1 Playwright admin journey (create a service → publish via
+    the workflow bar). `lint` / `build` green; no backend change.

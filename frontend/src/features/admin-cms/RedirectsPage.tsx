@@ -4,7 +4,7 @@ import { Button } from "../../components/Button/Button";
 import type { Column } from "../../components/admin/AdminDataTable";
 import { CheckboxField, TextField } from "../../components/admin/FormField";
 import { fieldErrorsFromApi, formErrorFromApi } from "../shared/publicForm";
-import { SimpleResourcePage } from "./SimpleResourcePage";
+import { SimpleResourcePage } from "../admin-shared/SimpleResourcePage";
 import { redirects as hooks } from "./hooks";
 import type { RedirectRow } from "./types";
 
