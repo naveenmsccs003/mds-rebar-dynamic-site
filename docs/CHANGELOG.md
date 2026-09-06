@@ -600,3 +600,29 @@
   - +3 vitest (service transition + ServicesPage create-body + CareersPage)
     → 117; +1 Playwright admin journey (create a service → publish via
     the workflow bar). `lint` / `build` green; no backend change.
+- **A4 — Inbox (leads + applications).**
+  - Backend: `apps.enquiries.serializers.LeadStatusMixin` adds a
+    read-only `allowed_transitions` (from `apps.enquiries.lifecycle`) to
+    `QuoteRequestAdminSerializer` and `EnquiryAdminSerializer`, so the
+    Inbox status bar renders the legal moves instead of hardcoding the
+    graph — mirroring the Phase-A1 `WorkflowStatusMixin` for the
+    publishing workflow. The *permission* each move needs is still
+    decided server-side. +2 backend tests → 272 passed, 1 skipped.
+  - `components/admin/DetailList` — read-only `<dl>` for the detail
+    drawers (everything the public submitter sent is immutable through
+    these APIs).
+  - `features/admin-inbox/`: `leadLifecycle.ts` mirrors
+    `lifecycle.required_permission` (assign / respond / close / change,
+    with the same `change_*` fallback for a model missing a verb) so a
+    move the role can't make is disabled, not hidden. `LeadForm` (status
+    `<select>` from `allowed_transitions` + assignee, one PATCH),
+    `NotesThread` (enquiry internal notes, append-only), and the three
+    pages — `QuoteRequestsPage`, `EnquiriesPage` (+ notes),
+    `ApplicationsPage` (on-demand signed résumé link, flat status,
+    delete behind `applications.delete_jobapplication`). Assignee is a
+    numeric user id until an assignee picker lands. Routes
+    `/admin/{quote-requests,enquiries,applications}` behind
+    `<RequirePermission>` (the Inbox nav group was already declared).
+  - +4 vitest (lead-perm mapping + status/assignee PATCH + note append +
+    résumé link) → 121; +1 Playwright admin journey (assign an enquiry →
+    add an internal note). `lint` / `build` green.

@@ -1125,3 +1125,70 @@ fieldset.form__field label {
   background: var(--color-danger);
   color: #fff;
 }
+
+/* --- Inbox (A4): read-only detail list + enquiry notes thread --- */
+.admin-detail {
+  margin: 0 0 var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+.admin-detail__row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.admin-detail__row dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.admin-detail__row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 540px) {
+  .admin-detail__row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+.status-pill--closed,
+.status-pill--spam {
+  color: var(--color-text-muted);
+}
+.status-pill--responded {
+  background: #e6f4ea;
+  border-color: #b7e0c4;
+}
+.status-pill--assigned,
+.status-pill--in_progress,
+.status-pill--reviewing,
+.status-pill--shortlisted {
+  background: #fff4e0;
+  border-color: #f0d9ac;
+}
+
+.notes-thread {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.notes-thread__item {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.notes-thread__meta {
+  margin: 0 0 2px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.notes-thread__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { err, ok, stubApi } from "./support";
+import { err, ok, page as paginated, stubApi } from "./support";
 
 const EDITOR = {
   id: 1,
@@ -195,6 +195,67 @@ test("catalogue: create a service, then publish it via the workflow bar", async 
   await expect(editDrawer.getByText("Status:")).toBeVisible();
   await editDrawer.getByRole("button", { name: "Publish" }).click();
   await expect(editDrawer).toBeHidden();
+});
+
+test("inbox: assign an enquiry, then add an internal note", async ({ page }) => {
+  const triager = {
+    ...EDITOR,
+    permissions: ["contact.view_enquiry", "contact.change_enquiry", "contact.assign_enquiry"],
+  };
+  const enquiry = {
+    id: 7,
+    public_reference: "MDS-E-2026-000007",
+    enquiry_type: "business",
+    name: "Sam Client",
+    email: "sam@example.com",
+    phone: "",
+    company: "",
+    message: "Do you work in Qatar?",
+    status: "new",
+    allowed_transitions: ["assigned", "in_progress", "responded", "closed", "spam"],
+    assigned_to: null,
+    assigned_to_email: "",
+    notes: [] as Array<Record<string, unknown>>,
+    ip_address: null,
+    user_agent: "",
+    created_at: "2026-09-01T00:00:00Z",
+  };
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(triager),
+    "GET /api/v1/admin/enquiries": (route) => route.fulfill({ json: ok(paginated([enquiry])) }),
+    "GET /api/v1/admin/enquiries/7": (route) => route.fulfill({ json: ok(enquiry) }),
+    "PATCH /api/v1/admin/enquiries/7": async (route) => {
+      const body = route.request().postDataJSON() as { status?: string; assigned_to?: number | null };
+      if (body.status) enquiry.status = body.status;
+      if ("assigned_to" in body) {
+        enquiry.assigned_to = body.assigned_to ?? null;
+        enquiry.assigned_to_email = body.assigned_to ? "ed@mds.example" : "";
+      }
+      return route.fulfill({ json: ok(enquiry) });
+    },
+    "POST /api/v1/admin/enquiries/7/notes": async (route) => {
+      const { note } = route.request().postDataJSON() as { note: string };
+      const row = { id: enquiry.notes.length + 1, note, author: 1, author_email: "ed@mds.example", created_at: "2026-09-02T00:00:00Z" };
+      enquiry.notes = [row, ...enquiry.notes];
+      return route.fulfill({ status: 201, json: ok(row) });
+    },
+  });
+
+  await page.goto("/admin/enquiries");
+  await page.getByText("MDS-E-2026-000007").click();
+
+  const drawer = page.getByRole("dialog", { name: "MDS-E-2026-000007" });
+  await expect(drawer.getByText("Do you work in Qatar?")).toBeVisible();
+
+  await drawer.getByRole("combobox", { name: "Status" }).selectOption("assigned");
+  await drawer.getByRole("spinbutton", { name: /Assigned to/ }).fill("1");
+  await drawer.getByRole("button", { name: "Save" }).click();
+  await expect(drawer.getByText("Currently ed@mds.example")).toBeVisible();
+
+  await drawer.getByRole("textbox", { name: "Add a note" }).fill("Emailed the Qatar team.");
+  await drawer.getByRole("button", { name: "Add note" }).click();
+  await expect(drawer.getByText("Emailed the Qatar team.")).toBeVisible();
 });
 
 test("a stale /admin deep link after logout returns to login", async ({ page }) => {

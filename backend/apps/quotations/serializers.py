@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.enquiries.serializers import LeadStatusMixin
 from apps.markets.models import Country
 from apps.pages.models import PublishStatus
 from apps.pages.serializers import PlainTextField
@@ -53,7 +54,7 @@ class _UserRefSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
-class QuoteRequestAdminSerializer(serializers.ModelSerializer):
+class QuoteRequestAdminSerializer(LeadStatusMixin, serializers.ModelSerializer):
     country_code = serializers.SlugField(source="country.code", read_only=True)
     service_slug = serializers.SlugField(source="service.slug", read_only=True)
     required_service_slugs = serializers.SerializerMethodField()
@@ -66,11 +67,11 @@ class QuoteRequestAdminSerializer(serializers.ModelSerializer):
             "name", "company", "email", "phone",
             "country", "country_code", "service", "service_slug", "required_service_slugs",
             "project_type", "project_location", "project_size", "timeline", "message",
-            "status", "assigned_to", "assigned_to_email",
+            "status", "allowed_transitions", "assigned_to", "assigned_to_email",
             "ip_address", "user_agent", "created_at", "updated_at",
         ]
         read_only_fields = [
-            "public_reference", "name", "company", "email", "phone",
+            "public_reference", "allowed_transitions", "name", "company", "email", "phone",
             "country", "service", "project_type", "project_location", "project_size",
             "timeline", "message", "ip_address", "user_agent", "created_at", "updated_at",
         ]

@@ -142,3 +142,18 @@ def test_admin_notes_are_appendable_and_permissioned(api, enquiry):
     assert resp.status_code == 201
     assert resp.json()["data"]["author_email"] == "e@mds.example"
     assert enquiry.notes.count() == 1
+
+
+@pytest.mark.django_db
+def test_admin_serializer_exposes_allowed_transitions(api, enquiry):
+    user = User.objects.create_user(email="bd@mds.example", password="x")
+    api.force_login(_grant(user, "view_enquiry", "change_enquiry", "close_enquiry"))
+
+    fresh = api.get(f"{ADMIN}{enquiry.pk}/").json()["data"]
+    assert fresh["allowed_transitions"] == sorted(
+        ["assigned", "in_progress", "responded", "closed", "spam"]
+    )
+
+    api.patch(f"{ADMIN}{enquiry.pk}/", {"status": "closed"}, format="json")
+    closed = api.get(f"{ADMIN}{enquiry.pk}/").json()["data"]
+    assert closed["allowed_transitions"] == ["in_progress"]  # reopen only

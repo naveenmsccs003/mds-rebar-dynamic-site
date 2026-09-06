@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.enquiries.serializers import LeadStatusMixin
 from apps.pages.serializers import PlainTextField
 
 from .models import Enquiry, EnquiryNote, EnquiryType
@@ -36,7 +37,7 @@ class EnquiryNoteSerializer(serializers.ModelSerializer):
         read_only_fields = ["author", "created_at"]
 
 
-class EnquiryAdminSerializer(serializers.ModelSerializer):
+class EnquiryAdminSerializer(LeadStatusMixin, serializers.ModelSerializer):
     assigned_to_email = serializers.EmailField(source="assigned_to.email", read_only=True)
     notes = EnquiryNoteSerializer(many=True, read_only=True)
 
@@ -45,10 +46,10 @@ class EnquiryAdminSerializer(serializers.ModelSerializer):
         fields = [
             "id", "public_reference", "enquiry_type",
             "name", "email", "phone", "company", "message",
-            "status", "assigned_to", "assigned_to_email", "notes",
+            "status", "allowed_transitions", "assigned_to", "assigned_to_email", "notes",
             "ip_address", "user_agent", "created_at",
         ]
         read_only_fields = [
-            "public_reference", "enquiry_type", "name", "email", "phone", "company",
-            "message", "ip_address", "user_agent", "created_at",
+            "public_reference", "allowed_transitions", "enquiry_type", "name", "email",
+            "phone", "company", "message", "ip_address", "user_agent", "created_at",
         ]

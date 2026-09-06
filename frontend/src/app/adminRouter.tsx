@@ -112,6 +112,35 @@ export const adminRoute: RouteObject = {
           ),
         },
 
+        // --- inbox (A4) ---
+        {
+          path: "quote-requests",
+          element: gated(
+            "quotations.view_quoterequest",
+            lazyRoute(
+              () => import("../features/admin-inbox/QuoteRequestsPage"),
+              (m) => m.QuoteRequestsPage,
+            ),
+          ),
+        },
+        {
+          path: "enquiries",
+          element: gated(
+            "contact.view_enquiry",
+            lazyRoute(() => import("../features/admin-inbox/EnquiriesPage"), (m) => m.EnquiriesPage),
+          ),
+        },
+        {
+          path: "applications",
+          element: gated(
+            "applications.view_jobapplication",
+            lazyRoute(
+              () => import("../features/admin-inbox/ApplicationsPage"),
+              (m) => m.ApplicationsPage,
+            ),
+          ),
+        },
+
         {
           path: "*",
           element: lazyRoute(

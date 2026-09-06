@@ -222,3 +222,20 @@ def test_admin_has_no_create_or_delete(api, quote):
                            "delete_quoterequest"))
     assert api.post(ADMIN, {"name": "x", "email": "x@x.com"}, format="json").status_code == 405
     assert api.delete(f"{ADMIN}{quote.pk}/").status_code == 405
+
+
+@pytest.mark.django_db
+def test_admin_serializer_exposes_read_only_allowed_transitions(api, quote):
+    user = User.objects.create_user(email="bd@mds.example", password="x")
+    api.force_login(_grant(user, "view_quoterequest", "change_quoterequest"))
+
+    body = api.get(f"{ADMIN}{quote.pk}/").json()["data"]
+    # a NEW lead can go anywhere except back to NEW (apps.enquiries.lifecycle)
+    assert body["allowed_transitions"] == sorted(
+        ["assigned", "in_progress", "responded", "closed", "spam"]
+    )
+
+    # it is advisory only — a client cannot write it
+    api.patch(f"{ADMIN}{quote.pk}/", {"allowed_transitions": ["nonsense"]}, format="json")
+    quote.refresh_from_db()
+    assert quote.status == "new"
