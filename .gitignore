@@ -1,0 +1,5 @@
+# Root-level ignores; backend/ and frontend/ each also have their own.
+.DS_Store
+*.log
+.env
+.env.local
