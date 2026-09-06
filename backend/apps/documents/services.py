@@ -14,11 +14,11 @@ download is refused until the scan has marked the file ``processed``.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import uuid
 
 from django.conf import settings
-from django.utils import timezone
 
 from apps.audit.services import log_action
 
@@ -32,6 +32,8 @@ from .validation import (
     sniff,
     validate_declared,
 )
+
+logger = logging.getLogger(__name__)
 
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -171,8 +173,10 @@ def _queue_scan(document: Document) -> None:
 
     try:
         scan_document.delay(document.pk)
-    except Exception:  # noqa: BLE001 - broker down: a sweep can re-scan pending rows
-        pass
+    except Exception:
+        # Broker unreachable — the row stays `pending` (not downloadable)
+        # and a periodic sweep re-scans pending documents.
+        logger.warning("could not queue scan for document %s", document.pk, exc_info=True)
 
 
 # --- download ----------------------------------------------------

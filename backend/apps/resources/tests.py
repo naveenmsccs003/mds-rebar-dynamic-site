@@ -99,10 +99,10 @@ def test_admin_download_count_is_read_only(api, editor, brochure):
 
 # --- Phase 10: signed download + count via the authorized path -------
 
-from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
+from django.core.files.uploadedfile import SimpleUploadedFile
 
-from apps.documents.models import DownloadLog, Visibility  # noqa: E402
-from apps.documents.services import store_bytes  # noqa: E402
+from apps.documents.models import DownloadLog, Visibility
+from apps.documents.services import store_bytes
 
 PDF = b"%PDF-1.4\n%%EOF\n"
 

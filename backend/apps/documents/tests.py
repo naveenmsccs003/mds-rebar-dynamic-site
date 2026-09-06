@@ -40,16 +40,16 @@ def test_download_log_records_access():
 
 # --- Phase 10: storage abstraction + upload / download flow -----------
 
-from django.contrib.auth import get_user_model  # noqa: E402
-from django.contrib.auth.models import Permission  # noqa: E402
-from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
-from rest_framework.test import APIClient  # noqa: E402
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework.test import APIClient
 
-from apps.audit.models import AuditLog  # noqa: E402
+from apps.audit.models import AuditLog
 
-from .models import ProcessingStatus  # noqa: E402
-from .services import can_download, issue_download, store_bytes  # noqa: E402
-from .storage import LocalSignedStorage, TokenExpired, get_storage  # noqa: E402
+from .models import ProcessingStatus
+from .services import can_download, store_bytes
+from .storage import LocalSignedStorage, TokenExpired, get_storage
 
 User = get_user_model()
 PDF = b"%PDF-1.4\n%%EOF\n"

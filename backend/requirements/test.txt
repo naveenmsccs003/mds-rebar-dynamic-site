@@ -2,3 +2,8 @@
 pytest>=8.3
 pytest-django>=4.9
 factory-boy>=3.3
+
+# Static analysis + security gates (docs/TESTING.md "Security checks in CI")
+ruff>=0.16
+bandit>=1.9
+pip-audit>=2.7

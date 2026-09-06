@@ -1,0 +1,40 @@
+[tool.ruff]
+# A deliberately narrow lint (docs/TESTING.md "a lint pass that fails the
+# build on obvious anti-patterns") — correctness + security, not style.
+line-length = 110
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = [
+    "F",     # pyflakes: undefined names, unused imports, f-string bugs
+    "E9",    # syntax errors
+    "S",     # flake8-bandit: eval/exec, SQL injection, weak crypto, verify=False, ...
+    "DJ",    # flake8-django: null on text fields, missing __str__, deprecated forms
+    "B006", "B008",  # mutable / call default arguments
+    "PIE",   # unnecessary constructs
+    "PLE",   # pylint errors
+    "T201",  # stray print()
+    "RUF100",# unused noqa
+]
+ignore = [
+    "S101",  # `assert` — fine in this codebase's DRF/service code and tests
+    "S104",  # binding to 0.0.0.0 (gunicorn config, deliberate)
+    "S105", "S106",  # "possible hardcoded password" — too many false positives on field names
+    "DJ008", # missing `__str__` — noise on counter / join-table models; not an anti-pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "DJ"]
+"**/tests.py" = ["S", "DJ"]
+"**/test_*.py" = ["S", "DJ"]
+"conftest.py" = ["S"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "*/migrations/*"]
+# B101 assert_used — see ruff S101.
+# B105/B106 hardcoded-password-string — only ever fires on `password="x"`
+#   in test helpers and on production.py's guard that *rejects* the
+#   insecure default secret. High false-positive, low signal; real
+#   secret handling is enforced by django-environ + production.py.
+skips = ["B101", "B105", "B106"]

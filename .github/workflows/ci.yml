@@ -1,6 +1,6 @@
-# CI pipeline (docs/CI_CD.md): lint -> type-check -> unit tests -> build.
-# Security checks, integration tests, Docker build, and deploy stages are
-# added in Phase 15 once there is a real staging target to deploy to.
+# CI pipeline (docs/CI_CD.md): lint -> static analysis / security -> type-check
+# -> unit + integration tests -> build -> E2E. Docker build and deploy stages
+# are added in Phase 15 once there is a real staging target.
 name: CI
 
 on:
@@ -22,6 +22,15 @@ jobs:
           cache: "pip"
           cache-dependency-path: backend/requirements/test.txt
       - run: pip install -r requirements/test.txt
+
+      # Lint + static analysis (docs/TESTING.md "Security checks in CI").
+      - run: ruff check .
+      - run: bandit -c pyproject.toml -r apps config -q
+      # Dependency vulnerability scan — advisory (a new CVE must not block
+      # an unrelated PR), but surfaced on every run.
+      - run: pip-audit -r requirements/base.txt -r requirements/test.txt
+        continue-on-error: true
+
       - run: python manage.py check
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
@@ -45,3 +54,25 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

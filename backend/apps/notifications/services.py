@@ -53,7 +53,7 @@ def queue(
             status=NotificationStatus.QUEUED,
             **fields,
         )
-    except Exception:  # noqa: BLE001 - a notification must never break intake
+    except Exception:
         logger.exception("Could not create NotificationLog for template %r", template)
         return None
 
@@ -61,7 +61,7 @@ def queue(
 
     try:
         send_notification.delay(log.pk, subject=subject, context=context)
-    except Exception:  # noqa: BLE001 - broker down: leave the row queued for a sweep
+    except Exception:
         logger.exception("Could not dispatch send_notification for log %s", log.pk)
 
     return log

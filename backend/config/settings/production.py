@@ -1,4 +1,4 @@
-from .base import *  # noqa: F401,F403
+from .base import *  # noqa: F403
 
 DEBUG = False
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])  # noqa: F405
@@ -31,7 +31,7 @@ CSP_REPORT_ONLY = False
 # No browsable HTML API in production — JSON only. The OpenAPI schema /
 # Swagger UI at /api/{schema,docs}/ stay reachable for internal use but
 # are disallowed in robots.txt and should be auth-gated at the proxy.
-REST_FRAMEWORK = {  # noqa: F405
+REST_FRAMEWORK = {
     **REST_FRAMEWORK,  # noqa: F405
     "DEFAULT_RENDERER_CLASSES": ["config.api_renderers.EnvelopeJSONRenderer"],
 }

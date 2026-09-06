@@ -78,15 +78,14 @@ def test_public_reference_must_be_unique():
 
 # --- Phase 9: public submission + admin workflow -----------------------
 
-from django.contrib.auth import get_user_model  # noqa: E402
-from django.contrib.auth.models import Permission  # noqa: E402
-from django.core import mail  # noqa: E402
-from rest_framework.test import APIClient  # noqa: E402
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.core import mail
+from rest_framework.test import APIClient
 
-from apps.audit.models import AuditLog  # noqa: E402
-from apps.markets.models import Country  # noqa: E402
-from apps.pages.models import PublishStatus  # noqa: E402
-from apps.services.models import Service  # noqa: E402
+from apps.audit.models import AuditLog
+from apps.pages.models import PublishStatus
+from apps.services.models import Service
 
 User = get_user_model()
 SUBMIT = "/api/v1/quote-requests/"

@@ -44,7 +44,7 @@ def send_notification(self, log_id: int, *, subject: str, context: dict) -> str:
 
     try:
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [log.recipient], fail_silently=False)
-    except Exception as exc:  # noqa: BLE001 - recorded + retried, never propagated
+    except Exception as exc:
         log.status = NotificationStatus.FAILED
         log.last_error = str(exc)[:2000]
         log.save(update_fields=["status", "attempts", "last_error", "updated_at"])

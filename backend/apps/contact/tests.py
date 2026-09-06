@@ -32,13 +32,13 @@ def test_public_reference_must_be_unique():
 
 # --- Phase 9: public submission + admin workflow -----------------------
 
-import pytest  # noqa: E402
-from django.contrib.auth import get_user_model  # noqa: E402
-from django.contrib.auth.models import Permission  # noqa: E402
-from django.core import mail  # noqa: E402
-from rest_framework.test import APIClient  # noqa: E402
+import pytest
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.core import mail
+from rest_framework.test import APIClient
 
-from apps.audit.models import AuditLog  # noqa: E402
+from apps.audit.models import AuditLog
 
 User = get_user_model()
 SUBMIT = "/api/v1/contact/"

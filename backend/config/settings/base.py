@@ -3,7 +3,6 @@ Base settings shared by every environment. Nothing environment-specific
 (debug flags, allowed hosts, credentials) lives here — see dev.py /
 staging.py / production.py / test.py.
 """
-from datetime import timedelta
 from pathlib import Path
 
 import environ

@@ -414,3 +414,37 @@
     skipped; `manage.py check` clean. No frontend change (the SPA host
     serves its own CSP).
   - `docs/SECURITY.md` + `docs/CHANGELOG.md` updated.
+- Phase 13 (Testing): filled the suites out to `docs/TESTING.md` and
+  wired the CI security gates.
+  - Backend `tests/test_integration.py` — four end-to-end journeys
+    (publishing workflow draft→review→approved→published with audit +
+    version + visibility assertions at each hop; quote submission → both
+    notifications → assign → close; document upload → PUT → complete →
+    scan → authorized download + DownloadLog; career application →
+    résumé stored/scanned → HR download). +4 tests → 240 backend, 1
+    skipped.
+  - Static analysis / security in CI: `ruff` (narrow rule set —
+    pyflakes, flake8-bandit, flake8-django, mutable-default args, stray
+    print, unused noqa; config in `backend/pyproject.toml`), `bandit -r
+    apps config`, and `pip-audit` (advisory) added to the backend job.
+    Existing code cleaned to pass (stale `# noqa`, unused imports, a
+    bare `except/pass` now logged). **Django bumped 5.1 → 5.2.x** to
+    clear seven `pip-audit` CVEs; full suite re-run green on 5.2.17.
+  - Frontend MSW layer (`src/test/msw/`, `onUnhandledRequest: "bypass"`
+    so the existing `vi.mock("./api")` suites are untouched):
+    `src/api/request.test.ts` covers the real envelope-unwrap + error
+    mapping over HTTP; `features/services/hooks.test.tsx` drives the
+    TanStack Query hooks against it. `msw` devDep. +8 → 91 frontend
+    tests.
+  - Playwright E2E (`frontend/e2e/`, `playwright.config.ts`,
+    `npm run e2e`): public journeys with the API stubbed per test via
+    `page.route` (`e2e/support.ts`) — home nav, global search, contact
+    form (validation → success), careers list→detail→application-form
+    validation. Runs against `vite preview`, no backend needed. New
+    `e2e` CI job; `@playwright/test` devDep. Admin-side journeys
+    (login/RBAC/publishing/user+permission management/audit) pending the
+    admin SPA.
+  - CI header comment updated; `vite.config.ts` scopes vitest to `src/`
+    so it ignores `e2e/`; `frontend/.gitignore` gets the Playwright
+    output dirs.
+  - `docs/TESTING.md` + `docs/CHANGELOG.md` updated.
