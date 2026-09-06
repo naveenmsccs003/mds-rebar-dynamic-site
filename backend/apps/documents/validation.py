@@ -13,10 +13,13 @@ Two entry points, for the two upload shapes:
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 
 from django.conf import settings
 from rest_framework import serializers
+
+_security_log = logging.getLogger("security")
 
 # Leading-byte signatures per extension. ``()`` means "no reliable magic"
 # (plain text / csv) — those pass the sniff on extension + declared type
@@ -71,9 +74,12 @@ POLICIES: dict[str, UploadPolicy] = {
 
 
 class UploadValidationError(serializers.ValidationError):
-    """400 ``VALIDATION_ERROR`` — carries the offending field."""
+    """400 ``VALIDATION_ERROR`` — carries the offending field. Every raise
+    also logs to the ``security`` logger: a stream of rejected uploads is
+    a probing signal worth watching (docs/SECURITY.md "File uploads")."""
 
     def __init__(self, message: str, field: str = "file"):
+        _security_log.info("upload rejected: field=%s reason=%s", field, message)
         super().__init__({field: [message]})
 
 

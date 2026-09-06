@@ -14,6 +14,25 @@ origins, never `*` for credentialed requests), Content-Security-Policy,
 `Referrer-Policy`. Django's `SecurityMiddleware` + `django-csp` configured
 per environment (relaxed in dev, strict in staging/prod).
 
+**Implemented (Phase 12).** Django's `SecurityMiddleware` provides HSTS
+(`SECURE_HSTS_*`), the SSL redirect, `nosniff` and `Referrer-Policy`;
+`XFrameOptionsMiddleware` sends `X-Frame-Options: DENY`; staging /
+production set `SESSION_COOKIE_SECURE` / `CSRF_COOKIE_SECURE` /
+`SECURE_SSL_REDIRECT` and `SECURE_PROXY_SSL_HEADER` (TLS terminates at
+the proxy). `config.security.SecurityHeadersMiddleware` adds the two
+Django does not: a strict **Content-Security-Policy**
+(`default-src 'self'`; no inline/remote script; `style-src` allows
+`'unsafe-inline'` only for the Django admin; `frame-ancestors 'none'`)
+and a **Permissions-Policy** turning off unused browser features. CSP is
+report-only in staging (`CSP_REPORT_ONLY`, default on there), enforced in
+production; the OpenAPI schema / Swagger paths are exempt (CDN assets,
+internal tooling, robots-disallowed). `django-csp` was evaluated — a
+~40-line middleware covers the Django-served surface without the
+dependency. The public SPA is served by its own host and ships its own
+CSP. Production also drops DRF's `BrowsableAPIRenderer` (JSON only).
+`manage.py check --deploy` is clean of `security.W*` findings with a real
+`DJANGO_SECRET_KEY`.
+
 ## AuthN
 Django's PBKDF2/Argon2 password hashing (never plaintext, never
 reversible encryption). Login/password-reset throttled and
@@ -58,6 +77,16 @@ forms, uploads, search, and general public API traffic. Honeypot fields
 and duplicate-submission detection on public forms; CAPTCHA reserved as a
 defense-in-depth layer, not the only control.
 
+**Implemented.** `ScopedRateThrottle` for the sensitive flows —
+`login` 10/min, `password-reset` 5/min, `quote-requests` / `contact` /
+`career-applications` 10/min, `uploads` 20/min, `search` 60/min — plus a
+baseline `AnonRateThrottle` (`THROTTLE_ANON`, default 120/min per IP) and
+`UserRateThrottle` (`THROTTLE_USER`, default 600/min) on **all** other
+API traffic including GETs (Phase 12). Honeypot + Idempotency-Key +
+10-minute same-email dedupe on every public form (Phases 8–9). Rejected
+uploads log to the `security` logger (Phase 12) — a stream of them is a
+probing signal.
+
 ## Secrets
 All credentials via environment variables (`django-environ`), never
 committed. `.env.example` ships with placeholders only. Frontend code
@@ -69,6 +98,21 @@ attempts, permission changes) are written to an append-only `AuditLog`
 with actor, action, entity, timestamp, IP/user-agent where relevant, and
 before/after state where relevant. No role can edit or delete audit
 records through the API.
+
+**Coverage review (Phase 12).** `AuditLog` actions in place:
+`auth.login.{failed,blocked}` / `auth.logout` / `auth.password.*`
+(Phase 3); `*.transition` for every CMS-workflow publish/unpublish
+(Phase 4+); `application.{submitted,updated}` (Phase 8);
+`quote_request.{submitted,updated}` / `enquiry.{submitted,updated}`
+(Phase 9); `document.{downloaded,scanned}` (Phase 10). The API layer
+enforces append-only — there is no `PUT/PATCH/DELETE` route on the audit
+viewset, and `ADMIN_DENIED` removes `audit.{add,change,delete}_auditlog`
+from every role. **Known gaps, closed when the owning surface ships:**
+user/role/permission changes made through the *Django admin* are
+recorded in Django's native `django_admin_log` (`LogEntry`), not
+`AuditLog` — the admin SPA's user-management API (a later phase) will
+write `AuditLog` rows directly; `sync_roles` runs are deploy-time and
+logged by the deploy pipeline.
 
 ## Application logging
 Structured logs (request ID, timestamp, endpoint, method, status,

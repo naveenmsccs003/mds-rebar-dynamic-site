@@ -81,8 +81,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "config.security.SecurityHeadersMiddleware",
     "apps.audit.middleware.RequestIDMiddleware",
 ]
+
+# --- Security headers (config.security; docs/SECURITY.md) ---------------
+# Roll CSP out in report-only mode first in a new environment, then flip.
+CSP_REPORT_ONLY = env.bool("CSP_REPORT_ONLY", default=False)
 
 ROOT_URLCONF = "config.urls"
 
@@ -270,10 +275,18 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
+    # A per-scope throttle for the sensitive flows *and* a baseline
+    # anon/user ceiling on all other API traffic (docs/SECURITY.md
+    # "Rate limiting" — "general public API traffic"). Backed by Redis in
+    # every real environment; LocMemCache in tests.
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.ScopedRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
+        "anon": env("THROTTLE_ANON", default="120/min"),
+        "user": env("THROTTLE_USER", default="600/min"),
         "login": "10/min",
         "password-reset": "5/min",
         "quote-requests": "10/min",
@@ -353,5 +366,9 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # Security-relevant events that aren't a full AuditLog row (no
+        # actor / entity) — rejected uploads, suspicious input. Route to a
+        # SIEM in production via the deployment's log pipeline.
+        "security": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }

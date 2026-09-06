@@ -21,6 +21,21 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
 
+# TLS terminates at the load balancer / ingress (docs/DEPLOYMENT.md).
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Content-Security-Policy is enforced (not report-only) in production
+# (config.security.SecurityHeadersMiddleware).
+CSP_REPORT_ONLY = False
+
+# No browsable HTML API in production — JSON only. The OpenAPI schema /
+# Swagger UI at /api/{schema,docs}/ stay reachable for internal use but
+# are disallowed in robots.txt and should be auth-gated at the proxy.
+REST_FRAMEWORK = {  # noqa: F405
+    **REST_FRAMEWORK,  # noqa: F405
+    "DEFAULT_RENDERER_CLASSES": ["config.api_renderers.EnvelopeJSONRenderer"],
+}
+
 # --- Email ------------------------------------------------------------
 # Password-reset (apps.accounts) and notification mail must go over real
 # SMTP in production — never the console backend inherited from base.py.

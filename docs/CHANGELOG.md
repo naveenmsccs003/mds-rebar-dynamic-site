@@ -379,3 +379,38 @@
     skipped; `manage.py check` clean. Frontend `lint` / `test` (83 pass)
     / `build` green.
   - `docs/SEARCH.md`, `docs/SEO.md`, `docs/API_DESIGN.md` updated.
+- Phase 12 (Security Hardening): a review pass — headers/CSP, rate-limit
+  baseline, upload-validation + audit-log review. No new features, no
+  schema change.
+  - `config.security.SecurityHeadersMiddleware` — a strict
+    `Content-Security-Policy` (`default-src 'self'`; no inline/remote
+    script; `style-src 'unsafe-inline'` only for the Django admin;
+    `frame-ancestors 'none'`; `object-src 'none'`) and a
+    `Permissions-Policy` disabling unused browser features. Report-only
+    in staging (`CSP_REPORT_ONLY`, on by default there), enforced in
+    production; `/api/schema/` + `/api/docs/` exempt. `django-csp` was
+    evaluated and skipped — the middleware is exactly as much policy as
+    the Django-served surface needs.
+  - Baseline throttling: `AnonRateThrottle` (`THROTTLE_ANON`, default
+    120/min per IP) + `UserRateThrottle` (`THROTTLE_USER`, default
+    600/min) added to `DEFAULT_THROTTLE_CLASSES` alongside the existing
+    per-scope throttles — all API traffic including GETs now has a
+    ceiling (docs/SECURITY.md "general public API traffic").
+  - staging + production: `SECURE_PROXY_SSL_HEADER`
+    (`X-Forwarded-Proto`) so `request.is_secure()` / the SSL redirect /
+    `robots.txt` scheme are right behind a TLS-terminating proxy.
+    Production also drops DRF's `BrowsableAPIRenderer` (JSON only).
+  - Upload-validation audit: `UploadValidationError` now logs every
+    rejection to a dedicated `security` logger (a run of rejected
+    uploads is a probing signal); allow-lists reviewed. Audit-log
+    coverage reviewed and written up in `docs/SECURITY.md` (Django-admin
+    user/role edits land in Django's native `LogEntry`; the admin SPA's
+    user API will write `AuditLog` directly when it ships).
+  - `manage.py check --deploy` is clean of `security.W*` findings with a
+    real secret key.
+  - 7 backend tests (CSP + Permissions-Policy present / exempt paths /
+    report-only toggle / on JSON responses; anon baseline throttle trips,
+    authenticated users get the higher ceiling). Backend: 236 passed, 1
+    skipped; `manage.py check` clean. No frontend change (the SPA host
+    serves its own CSP).
+  - `docs/SECURITY.md` + `docs/CHANGELOG.md` updated.
