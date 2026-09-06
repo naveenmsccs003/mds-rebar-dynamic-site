@@ -28,6 +28,8 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { label: "CMS sections", to: "/admin/cms/sections", perms: ["pages.view_pagesection"] },
       { label: "Site settings", to: "/admin/cms/settings", perms: ["pages.view_sitesetting"] },
+      { label: "Tags", to: "/admin/cms/tags", perms: ["pages.view_tag"] },
+      { label: "Redirects", to: "/admin/cms/redirects", perms: ["pages.view_redirect"] },
       { label: "Services", to: "/admin/services", perms: ["services.view_service"] },
       { label: "Portfolio", to: "/admin/portfolio", perms: ["portfolio.view_project"] },
       { label: "News", to: "/admin/news", perms: ["news.view_news"] },

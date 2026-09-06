@@ -65,6 +65,59 @@ test("sign in → dashboard, sidebar reflects permissions, sign out", async ({ p
   await expect(page).toHaveURL(/\/admin\/login/);
 });
 
+test("CMS: open a section, submit it for review, see version history", async ({ page }) => {
+  const section = {
+    id: 1,
+    page_key: "home",
+    section_key: "hero",
+    display_order: 0,
+    content: { heading: "Hi" },
+    status: "draft",
+    allowed_transitions: ["review", "archived"],
+    published_at: null,
+    scheduled_publish_at: null,
+    current_version: null,
+    updated_by_email: "ed@mds.example",
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+  };
+  const editor = {
+    ...EDITOR,
+    permissions: [
+      "pages.view_pagesection",
+      "pages.change_pagesection",
+      "pages.add_pagesection",
+    ],
+  };
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(editor),
+    "GET /api/v1/admin/cms/sections": ok({ count: 1, next: null, previous: null, results: [section] }),
+    "GET /api/v1/admin/cms/sections/1": ok(section),
+    "GET /api/v1/admin/cms/sections/1/versions": ok({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [
+        { id: 5, snapshot: {}, note: "created", edited_by_email: "ed@mds.example", edited_at: "2026-09-01T00:00:00Z" },
+      ],
+    }),
+    "POST /api/v1/admin/cms/sections/1/transition": (route) =>
+      route.fulfill({ json: ok({ ...section, status: "review", allowed_transitions: ["draft", "approved"] }) }),
+  });
+
+  await page.goto("/admin/cms/sections");
+  await page.getByText("hero").click();
+
+  const drawer = page.getByRole("dialog", { name: /edit home\/hero/i });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText(/created/)).toBeVisible(); // version history row
+
+  await drawer.getByRole("button", { name: "Submit for review" }).click();
+  // the drawer closes on success and the list stays put
+  await expect(drawer).toBeHidden();
+});
+
 test("a stale /admin deep link after logout returns to login", async ({ page }) => {
   await stubApi(page, {
     "GET /api/v1/auth/session": (route) => route.fulfill({ status: 401, json: err("x", "x") }),

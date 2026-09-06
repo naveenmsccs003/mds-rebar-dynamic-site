@@ -563,3 +563,24 @@
     queue. +8 frontend tests (MSW) → 99; +3 Playwright admin journeys
     (anon→login, sign-in→dashboard→permission-filtered sidebar→sign-out,
     stale deep link). `lint` / `build` green.
+- **A2 — Admin primitives + CMS.**
+  - `components/admin/`: `AdminDataTable` (server-paginated, column
+    config, toolbar slot, loading/empty/error), `FormDrawer` (slide-over,
+    Escape + backdrop close, focus restore), `FormField` set (RHF-ready
+    `TextField`/`TextAreaField`/`SelectField`/`CheckboxField`),
+    `WorkflowBar` (one button per `allowed_transitions`; a move to/from
+    PUBLISHED needs `publish_<model>`, else `change_<model>` — disabled,
+    not hidden, when the role lacks it), `VersionHistoryPanel` (list +
+    per-row rollback), `ConfirmDialog`.
+  - `features/admin-shared/`: `crud.ts` (list/get/create/update/remove +
+    transition/versions/rollback URL helpers) and `makeCrudHooks`
+    (query + mutation hook factory) so every simple admin resource is a
+    few lines.
+  - `features/admin-cms/`: `SectionsPage` (filter by page_key/status,
+    edit drawer with the `content` JSON editor + `WorkflowBar` +
+    `VersionHistoryPanel`), `SettingsPage`, `TagsPage`, `RedirectsPage`
+    (via a shared `SimpleResourcePage`). Routes `cms/{sections,settings,
+    tags,redirects}` wired behind `<RequirePermission>`; nav updated.
+  - +15 vitest → 114; +1 Playwright admin journey (open a section →
+    submit for review → version history). `lint` / `build` green; public
+    bundle unchanged.
