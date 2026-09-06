@@ -21,6 +21,23 @@ used for development or testing.
 `redis`, `worker`, `scheduler` with hot-reload for both frontend and
 backend. See repository root `docker-compose.yml`.
 
+## Implemented (Phase 15)
+- **Images:** `backend/Dockerfile` and `frontend/Dockerfile` are
+  multi-stage — `--target dev` (used by compose; autoreload, dev/test
+  deps) and `--target prod` (slim, non-root `app` user, `collectstatic`
+  baked in, `gunicorn -c gunicorn.conf.py`; the frontend `prod` stage is
+  nginx serving `dist/`). The worker/scheduler run the same `backend`
+  `prod` image with `celery -A config worker|beat` as the command.
+  `.dockerignore` in each.
+- **Settings:** `config.settings.production` wires `STORAGES["default"]`
+  → django-storages S3 (`AWS_STORAGE_BUCKET_NAME` present flips
+  `DOCUMENT_STORAGE_BACKEND` to `S3SignedStorage`), Sentry (`SENTRY_DSN`),
+  `SECURE_PROXY_SSL_HEADER`, JSON-only DRF renderer.
+  `config.settings.ci` runs the suite against real Postgres/Redis in CI.
+- **Health:** `/health/` and `/ready/` (Phase 1) are hit by
+  `frontend/e2e/smoke.spec.ts` after a staging deploy.
+- **Pipeline:** see `docs/CI_CD.md` "Implemented".
+
 ## Release process
 Build once per commit (Docker images for backend/worker; a static bundle
 for frontend), promote the same artifact through staging → production

@@ -477,3 +477,37 @@
   - +12 backend tests → 252 passed, 1 skipped; `ruff` / `bandit` clean.
     Frontend 91 tests + 4 E2E green; `lint` / `build` green.
   - `docs/PERFORMANCE.md` + `docs/CHANGELOG.md` updated.
+- Phase 15 (Docker + CI/CD): production images + the full pipeline.
+  - `backend/Dockerfile` and `frontend/Dockerfile` are now multi-stage:
+    `--target dev` (compose; autoreload + dev deps) and `--target prod`
+    (slim, non-root `app` user, `collectstatic` baked in,
+    `gunicorn -c gunicorn.conf.py`; frontend `prod` = nginx serving
+    `dist/` with an SPA fallback + cache headers). `.dockerignore` in
+    each; `docker-compose.yml` targets `dev` and de-dupes via YAML
+    anchors. `boto3` added to `requirements/production.txt`.
+  - `config.settings.production` wires object storage (django-storages
+    S3; `AWS_STORAGE_BUCKET_NAME` flips `DOCUMENT_STORAGE_BACKEND` to
+    `S3SignedStorage`), Sentry (`SENTRY_DSN`), and keeps the Phase 12
+    hardening. `config.settings.ci` runs the suite against real
+    Postgres/Redis.
+  - `.github/workflows/ci.yml` is the full pipeline (docs/CI_CD.md):
+    `backend` (ruff + bandit + pip-audit + check + pytest), `frontend`
+    (lint + vitest + build + npm audit), `integration` (pytest under
+    `config.settings.ci` against Postgres 16 + Redis 7 service
+    containers — the PG-only concurrency test now runs), `e2e`
+    (Playwright), `docker` (build `--target prod`, push to
+    `ghcr.io/<repo>/{backend,frontend}:<sha>` on `main`),
+    `deploy-staging` (auto on `main`, GitHub `staging` environment, runs
+    `smoke.spec.ts` against `STAGING_URL`), `deploy-production`
+    (`needs: deploy-staging`, `production` environment = the manual
+    approval gate). Deploy steps are `echo` placeholders to wire to the
+    platform.
+  - `frontend/e2e/smoke.spec.ts` (home loads, `/health/` + `/ready/` OK,
+    public API answers) — selected only when `SMOKE_BASE_URL` is set;
+    `playwright.config.ts` skips the local server in that mode.
+  - `README.md` updated with the CI/CD flow and the repo-side config
+    still to do (branch protection, environments, deploy commands).
+  - `router.tsx`'s lazy-route helper moved to `src/app/lazyRoute.tsx`
+    (clean lint). No backend logic change; 252 backend / 91 frontend /
+    4 E2E still green.
+  - `docs/CI_CD.md`, `docs/DEPLOYMENT.md`, `docs/CHANGELOG.md` updated.

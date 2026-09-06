@@ -1,12 +1,12 @@
-import { type ComponentType, type ReactElement, lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
 import { HomePage } from "../features/home/HomePage";
 import { LegalPage } from "../features/legal/LegalPage";
-import { RouteFallback } from "../layouts/RouteFallback";
 import { PublicLayout } from "../layouts/PublicLayout";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
+
+import { lazyRoute as route } from "./lazyRoute";
 
 /**
  * Route table matching the public navigation in the spec (§7).
@@ -20,15 +20,6 @@ import { PlaceholderPage } from "../pages/PlaceholderPage";
  * `:slug` param feeding one reusable template component each (spec §10 —
  * never one React page per service/article).
  */
-function route<M>(loader: () => Promise<M>, pick: (m: M) => ComponentType): ReactElement {
-  const Lazy = lazy(() => loader().then((m) => ({ default: pick(m) })));
-  return (
-    <Suspense fallback={<RouteFallback />}>
-      <Lazy />
-    </Suspense>
-  );
-}
-
 const placeholder = (title: string) => ({ element: <PlaceholderPage title={title} /> });
 
 export const router = createBrowserRouter([

@@ -35,9 +35,8 @@ cp .env.example .env   # then edit values
 python manage.py migrate
 python manage.py runserver
 ```
-Note: this repo's own sandbox venv was built against Python 3.14 for
-convenience; `requirements/*.txt` and the Dockerfile target Python 3.12,
-which is Django 5.1's supported/tested runtime — use 3.12 for anything
+Note: `requirements/*.txt` and the Dockerfiles target Python 3.12 on
+Django 5.2.x (the current supported series) — use 3.12 for anything
 beyond local scaffolding checks.
 
 Without a running PostgreSQL/Redis, `USE_SQLITE_FOR_LOCAL_DEV=True` in
@@ -60,9 +59,29 @@ docker compose up
 ## Testing
 
 ```bash
-cd backend && pytest
-cd frontend && npm run test
+cd backend  && pytest && ruff check . && bandit -c pyproject.toml -r apps config
+cd frontend && npm run lint && npm run test && npm run build
+cd frontend && npm run e2e          # Playwright, public journeys (API stubbed)
 ```
+
+## CI/CD
+
+`.github/workflows/ci.yml` is the full pipeline (`docs/CI_CD.md`):
+lint + static analysis → unit tests → **integration tests on real
+Postgres/Redis service containers** (`config.settings.ci`) → Playwright
+E2E → multi-stage Docker build (`--target prod`) → push to GHCR and
+deploy to **staging** (auto on `main`) → smoke tests → **production**
+(manual approval via the `production` GitHub Environment).
+
+To finish wiring a real deployment:
+- add required status checks (`backend`, `frontend`, `integration`,
+  `e2e`) to the `main` branch protection rule;
+- configure the `staging` / `production` GitHub Environments (required
+  reviewers on `production` = the manual gate) and the `STAGING_URL` /
+  `PRODUCTION_URL` / `SMOKE_API_URL` variables;
+- replace the `echo` placeholders in `deploy-staging` / `deploy-production`
+  with the platform's deploy command (each must run
+  `manage.py migrate --noinput` before cutting traffic over).
 
 ## Documentation
 

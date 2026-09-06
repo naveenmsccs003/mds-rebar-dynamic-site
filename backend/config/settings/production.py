@@ -42,3 +42,40 @@ REST_FRAMEWORK = {
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 if not env("EMAIL_HOST", default=""):  # noqa: F405
     raise RuntimeError("EMAIL_HOST must be set in production (password-reset mail).")
+
+# --- Object storage (docs/FILE_STORAGE.md) ---------------------------
+# Uploaded files live in S3 (or any S3-compatible service). The signed
+# URL / presigned upload logic is `apps.documents.storage.S3SignedStorage`;
+# `STORAGES["default"]` is django-storages' S3 backend for the raw
+# read/write. Private objects are never public-read — access is always
+# the signed-URL path.
+_AWS_BUCKET = env("AWS_STORAGE_BUCKET_NAME", default="")  # noqa: F405
+if _AWS_BUCKET:
+    DOCUMENT_STORAGE_BACKEND = "apps.documents.storage.S3SignedStorage"
+    _s3_options = {
+        "bucket_name": _AWS_BUCKET,
+        "region_name": env("AWS_S3_REGION_NAME", default=""),  # noqa: F405
+        "default_acl": "private",
+        "querystring_auth": True,
+        "file_overwrite": False,
+    }
+    _endpoint = env("AWS_S3_ENDPOINT_URL", default="")  # noqa: F405
+    if _endpoint:
+        _s3_options["endpoint_url"] = _endpoint
+    STORAGES = {
+        **STORAGES,  # noqa: F405
+        "default": {"BACKEND": "storages.backends.s3.S3Storage", "OPTIONS": _s3_options},
+    }
+    # Credentials come from the environment / instance role — never settings.
+
+# --- Error tracking -------------------------------------------------
+_SENTRY_DSN = env("SENTRY_DSN", default="")  # noqa: F405
+if _SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        environment="production",
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.05),  # noqa: F405
+        send_default_pii=False,
+    )
