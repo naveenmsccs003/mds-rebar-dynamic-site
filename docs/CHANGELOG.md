@@ -511,3 +511,31 @@
     (clean lint). No backend logic change; 252 backend / 91 frontend /
     4 E2E still green.
   - `docs/CI_CD.md`, `docs/DEPLOYMENT.md`, `docs/CHANGELOG.md` updated.
+- Phase 16 (Production Readiness): readiness gating, backup drill,
+  acceptance suite, as-built docs — the last phase.
+  - `/ready/` now gates on **database + cache + migrations applied** (a
+    rolling deploy that skipped `migrate` returns 503 so the LB drops
+    the instance); the Celery broker is reported but informational.
+    `/health/` stays dependency-free. `tests/test_health.py` expanded to
+    5 tests (gating, pending-migration block).
+  - `backend/scripts/restore_drill.sh` — `pg_dump` → fresh scratch DB →
+    `pg_restore` → `migrate --check` + a row-count assertion, drop.
+    Runs in CI as the `backup-drill` job (Postgres service container,
+    `needs: [integration]`, blocks `docker`); in production, schedule it
+    against the latest real backup.
+  - `backend/tests/test_acceptance.py` (9 tests) — one place that
+    re-asserts the cross-cutting guarantees: response envelope
+    (success + error), server-side authz (401/403), append-only audit,
+    security headers, public-write throttle, health/ready/robots/sitemap
+    served, global search answers, private files not anonymously
+    downloadable. `docs/ACCEPTANCE.md` maps these + a manual pre-launch
+    checklist (incl. the spec §81 walk-through).
+  - `docs/CURRENT_STATE.md` rewritten from the Phase-1 greenfield report
+    to the as-built state (what each phase delivered; what is deferred —
+    the admin SPA, real deploy infra, business content, CDN images,
+    prerendering, malware scanner, blogs/events/csr APIs).
+  - `docs/BACKUP_DISASTER_RECOVERY.md` finalised with concrete
+    recommended RPO/RTO/retention targets and the drill procedure.
+  - +14 backend tests → 264 passed, 1 skipped; `ruff` / `bandit` clean.
+  - `docs/CURRENT_STATE.md`, `docs/BACKUP_DISASTER_RECOVERY.md`,
+    `docs/ACCEPTANCE.md` (new), `docs/CHANGELOG.md` updated.
