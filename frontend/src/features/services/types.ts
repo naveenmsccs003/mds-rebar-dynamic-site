@@ -4,6 +4,9 @@
  */
 export interface MediaRef {
   id: number;
+  /** Signed URL to the underlying public file; `null` until the upload
+   * has been scanned (docs/FILE_STORAGE.md). Render gracefully either way. */
+  url: string | null;
   alt_text: string;
   caption: string;
   width: number | null;

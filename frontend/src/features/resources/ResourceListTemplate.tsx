@@ -1,10 +1,12 @@
 /**
- * Public resources list (spec §13). Restricted resources appear with a
- * badge; the actual file link for them is a signed URL resolved at
- * request time in Phase 10 — here the card links to `external_url` when
- * present and otherwise shows the restriction.
+ * Public resources list (spec §13). A resource with a file gets a
+ * Download action that resolves a short-lived signed URL at click time
+ * (docs/FILE_STORAGE.md); a `restricted` resource needs a signed-in
+ * Knowledge Base account and returns 403 otherwise.
  */
 import { PAGE_SIZE } from "../../api/request";
+import { ApiRequestError } from "../../api/request";
+import { Button } from "../../components/Button/Button";
 import { Container } from "../../components/Container/Container";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { FilterBar, type Filter } from "../../components/FilterBar/FilterBar";
@@ -14,8 +16,65 @@ import { SEOHead } from "../../components/SEOHead/SEOHead";
 import { Section } from "../../components/Section/Section";
 import { Skeleton } from "../../components/Skeleton/Skeleton";
 import { useListParams } from "../shared/useListParams";
-import { useResources } from "./hooks";
-import { RESOURCE_CATEGORIES } from "./types";
+import { useResourceDownload, useResources } from "./hooks";
+import { RESOURCE_CATEGORIES, type ResourceListItem } from "./types";
+
+const categoryLabel = (value: string) =>
+  RESOURCE_CATEGORIES.find((c) => c.value === value)?.label ?? value;
+
+function DownloadButton({ resource }: { resource: ResourceListItem }) {
+  const download = useResourceDownload();
+
+  function onClick() {
+    download.mutate(resource.slug, {
+      onSuccess: ({ url }) => window.location.assign(url),
+    });
+  }
+
+  const message =
+    download.error instanceof ApiRequestError
+      ? download.error.status === 403
+        ? "Sign in to a Knowledge Base account to download this."
+        : download.error.message
+      : undefined;
+
+  return (
+    <p>
+      <Button variant="secondary" onClick={onClick} disabled={download.isPending}>
+        {download.isPending ? "Preparing…" : "Download"}
+      </Button>
+      {message && (
+        <span className="form__error" role="alert">
+          {" "}
+          {message}
+        </span>
+      )}
+    </p>
+  );
+}
+
+function ResourceCard({ resource }: { resource: ResourceListItem }) {
+  return (
+    <li className="card">
+      <p className="card__eyebrow">
+        {categoryLabel(resource.category)}
+        {resource.access_type === "restricted" && (
+          <span className="badge badge--muted"> Restricted</span>
+        )}
+      </p>
+      <h2 className="card__title">{resource.title}</h2>
+      {resource.description && <p className="card__body">{resource.description}</p>}
+      {resource.has_file && <DownloadButton resource={resource} />}
+      {resource.external_url && (
+        <p>
+          <a href={resource.external_url} target="_blank" rel="noopener noreferrer">
+            Open resource
+          </a>
+        </p>
+      )}
+    </li>
+  );
+}
 
 export function ResourceListTemplate() {
   const { get, page, setParam, setPage, filterParams } = useListParams();
@@ -39,9 +98,6 @@ export function ResourceListTemplate() {
       onChange: (v) => setParam("category", v),
     },
   ];
-
-  const categoryLabel = (value: string) =>
-    RESOURCE_CATEGORIES.find((c) => c.value === value)?.label ?? value;
 
   return (
     <>
@@ -79,23 +135,7 @@ export function ResourceListTemplate() {
           <Section>
             <ul className="cms-card-grid">
               {pageData.results.map((r) => (
-                <li key={r.id} className="card">
-                  <p className="card__eyebrow">
-                    {categoryLabel(r.category)}
-                    {r.access_type === "restricted" && (
-                      <span className="badge badge--muted"> Restricted</span>
-                    )}
-                  </p>
-                  <h2 className="card__title">{r.title}</h2>
-                  {r.description && <p className="card__body">{r.description}</p>}
-                  {r.external_url && (
-                    <p>
-                      <a href={r.external_url} target="_blank" rel="noopener noreferrer">
-                        Open resource
-                      </a>
-                    </p>
-                  )}
-                </li>
+                <ResourceCard key={r.id} resource={r} />
               ))}
             </ul>
             <Pagination

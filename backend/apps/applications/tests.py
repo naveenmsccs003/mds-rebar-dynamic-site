@@ -66,7 +66,7 @@ def test_defaults_to_new_status(job):
 
 
 @pytest.mark.django_db
-def test_submit_stores_private_pending_document_and_audits(api, job):
+def test_submit_stores_private_document_and_audits(api, job):
     resp = api.post(SUBMIT, form(job), format="multipart")
     assert resp.status_code == 201
     body = resp.json()
@@ -79,7 +79,9 @@ def test_submit_stores_private_pending_document_and_audits(api, job):
 
     doc = application.resume
     assert doc.visibility == Visibility.PRIVATE
-    assert doc.status == ProcessingStatus.PENDING
+    # The scan (eager in tests) runs on submit — a real deployment leaves
+    # this `pending` until the async scan completes.
+    assert doc.status == ProcessingStatus.PROCESSED
     assert doc.original_filename == "cv.pdf"
     assert doc.object_key.startswith("private/resumes/")
     assert doc.object_key != "cv.pdf" and "cv" not in doc.object_key
@@ -274,3 +276,48 @@ def test_admin_delete_needs_delete_permission(api, reviewer, application):
     assert api.delete(f"{ADMIN}{application.pk}/").status_code == 403
     api.force_login(grant(reviewer, "delete_jobapplication"))
     assert api.delete(f"{ADMIN}{application.pk}/").status_code == 204
+
+
+# --- Phase 10: HR résumé download ----------------------------------
+
+
+@pytest.mark.django_db
+def test_hr_can_download_resume_via_signed_url(api, reviewer, job):
+    from apps.documents.models import DownloadLog
+    from apps.documents.services import store_bytes
+
+    doc = store_bytes(
+        category="resume",
+        uploaded_file=SimpleUploadedFile("cv.pdf", PDF_BYTES, content_type="application/pdf"),
+    )  # eager scan -> processed
+    application = JobApplication.objects.create(job=job, name="Jane", email="j@x.com", resume=doc)
+
+    api.force_login(reviewer)
+    resp = api.get(f"{ADMIN}{application.pk}/resume/")
+    assert resp.status_code == 200
+    assert "/files/d/" in resp.json()["data"]["url"]
+    assert DownloadLog.objects.filter(document=doc, user=reviewer).count() == 1
+
+    served = api.get(resp.json()["data"]["url"])
+    assert b"".join(served.streaming_content) == PDF_BYTES
+
+
+@pytest.mark.django_db
+def test_hr_resume_download_409_before_scan(api, reviewer, job):
+    from apps.documents.models import Document, ProcessingStatus, Visibility
+
+    doc = Document.objects.create(
+        object_key="private/resumes/x.pdf", original_filename="cv.pdf",
+        content_type="application/pdf", size_bytes=10,
+        visibility=Visibility.PRIVATE, status=ProcessingStatus.PENDING,
+    )
+    application = JobApplication.objects.create(job=job, name="Jane", email="j@x.com", resume=doc)
+    api.force_login(reviewer)
+    assert api.get(f"{ADMIN}{application.pk}/resume/").status_code == 409
+
+
+@pytest.mark.django_db
+def test_hr_resume_download_needs_view_permission(api, application):
+    plain = User.objects.create_user(email="nobody@mds.example", password="x")
+    api.force_login(plain)
+    assert api.get(f"{ADMIN}{application.pk}/resume/").status_code == 403

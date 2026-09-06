@@ -24,7 +24,7 @@ from apps.audit.services import log_action
 from apps.notifications import services as notifications
 
 from .models import JobApplication
-from .uploads import store_resume, validate_resume
+from .uploads import store_resume
 
 ENTITY = "applications.JobApplication"
 DEDUPE_WINDOW = timedelta(minutes=10)
@@ -74,8 +74,7 @@ def submit_application(request, *, data: dict, resume_file, idempotency_key: str
     if duplicate is not None:
         return SubmitResult(duplicate, created=False)
 
-    ext = validate_resume(resume_file)
-    document = store_resume(resume_file, ext=ext)
+    document = store_resume(resume_file)
 
     try:
         with transaction.atomic():

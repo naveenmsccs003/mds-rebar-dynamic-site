@@ -10,15 +10,21 @@ Admin — session auth + `resources.*_resource` permissions:
 """
 from __future__ import annotations
 
-from django.db.models import Q
+from django.db.models import F, Q
+from django.http import Http404
 from django_filters import rest_framework as filters
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 
+from apps.documents import services as documents
+from apps.documents.exceptions import FileNotReady
 from apps.pages.api_mixins import crud_perms
 from apps.permissions.permissions import HasRequiredPermissions
+from config.api_responses import ok
 
-from .models import Resource
+from .models import AccessType, Resource
 from .serializers import (
     ResourceAdminSerializer,
     ResourceDetailSerializer,
@@ -47,6 +53,32 @@ class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         return ResourceDetailSerializer if self.action == "retrieve" else ResourceListSerializer
+
+    @action(detail=True, methods=["get"], url_path="download")
+    def download(self, request, slug=None):
+        """Issue a signed URL for the resource's file and count the
+        download through this authorized path (never a client-reported
+        event — docs/FILE_STORAGE.md "Restricted resources"). A
+        `restricted` resource needs a signed-in Knowledge Base account
+        (`resources.view_resource`); a `public` one is open.
+        """
+        resource = self.get_object()
+        if not resource.file_id:
+            raise Http404
+        if resource.access_type == AccessType.RESTRICTED and not (
+            request.user.is_authenticated and request.user.has_perm("resources.view_resource")
+        ):
+            raise PermissionDenied("This resource requires a Knowledge Base account.")
+
+        try:
+            payload = documents.issue_download(
+                resource.file, user=request.user, request=request, skip_authz=True
+            )
+        except documents.DownloadNotReady:
+            raise FileNotReady() from None
+
+        Resource.objects.filter(pk=resource.pk).update(download_count=F("download_count") + 1)
+        return ok(payload)
 
 
 class ResourceAdminViewSet(viewsets.ModelViewSet):

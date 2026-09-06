@@ -9,6 +9,7 @@ export { Breadcrumbs } from "./Breadcrumbs/Breadcrumbs";
 export type { Crumb } from "./Breadcrumbs/Breadcrumbs";
 export { Skeleton } from "./Skeleton/Skeleton";
 export { SEOHead } from "./SEOHead/SEOHead";
+export { MediaImage } from "./MediaImage/MediaImage";
 export { RichText } from "./RichText/RichText";
 export { PageState } from "./PageState/PageState";
 export { Pagination } from "./Pagination/Pagination";

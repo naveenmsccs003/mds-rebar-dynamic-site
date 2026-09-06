@@ -40,16 +40,17 @@ metadata. Private files require an authorization check and a
 short-lived signed URL — never a predictable public path. See
 `FILE_STORAGE.md`.
 
-Phase 8 — the public career-application résumé is the first upload path.
-`apps.applications.uploads` enforces `RESUME_UPLOAD_MAX_BYTES`
-(default 5 MB), an extension allow-list (`pdf` / `doc` / `docx`), and a
-leading-byte signature check (`%PDF-`, OLE2, ZIP) so a mislabelled or
-disguised file is rejected; the stored key is a random UUID under a
-private prefix, and the `Document` is left `status=pending`. `libmagic`
-is intentionally not a dependency — the signature check covers the
-allowed types. Full MIME sniffing + malware scanning + presigned uploads
-land with object storage in Phase 10 (`uploads.scan_hook` is the
-attach point); the upload-validation audit is Phase 12.
+Phase 8 introduced the first upload path (the public career-application
+résumé). Phase 10 generalised it: `apps.documents.validation` holds the
+per-category policies (size ceiling, extension allow-list, leading-byte
+signature check — `libmagic` intentionally not a dependency),
+`apps.documents.services.store_bytes` / `issue_upload` do the storing
+(random-UUID key under a `private/` or `public/` prefix, SHA-256,
+`status=pending`), and `documents.scan_document` (Celery) is the
+malware-scan hook — a detection deletes the object and marks the row
+`failed`; nothing is downloadable while `pending`. `apps.applications.
+uploads` is now a thin adapter over this. Real AV integration + the
+upload-validation audit remain Phase 12.
 
 ## Rate limiting / anti-spam
 Throttling (Redis-backed) on login, password reset, quote/contact/career

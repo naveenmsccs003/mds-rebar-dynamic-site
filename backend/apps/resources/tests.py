@@ -95,3 +95,59 @@ def test_admin_download_count_is_read_only(api, editor, brochure):
     api.patch(f"{ADMIN}{brochure.pk}/", {"download_count": 999}, format="json")
     brochure.refresh_from_db()
     assert brochure.download_count == 0
+
+
+# --- Phase 10: signed download + count via the authorized path -------
+
+from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
+
+from apps.documents.models import DownloadLog, Visibility  # noqa: E402
+from apps.documents.services import store_bytes  # noqa: E402
+
+PDF = b"%PDF-1.4\n%%EOF\n"
+
+
+def _doc(visibility):
+    return store_bytes(
+        category="document",
+        uploaded_file=SimpleUploadedFile("f.pdf", PDF, content_type="application/pdf"),
+        visibility=visibility,
+    )
+
+
+@pytest.mark.django_db
+def test_public_resource_download_signs_and_counts(api, brochure):
+    brochure.file = _doc(Visibility.PUBLIC)
+    brochure.save(update_fields=["file"])
+
+    resp = api.get(f"{PUBLIC}company-brochure/download/")
+    assert resp.status_code == 200
+    assert "/files/d/" in resp.json()["data"]["url"]
+    brochure.refresh_from_db()
+    assert brochure.download_count == 1
+    assert DownloadLog.objects.filter(document=brochure.file).count() == 1
+
+    # the URL serves the bytes
+    served = api.get(resp.json()["data"]["url"])
+    assert b"".join(served.streaming_content) == PDF
+
+
+@pytest.mark.django_db
+def test_restricted_resource_download_requires_knowledge_base_account(api, db):
+    r = Resource.objects.create(
+        title="Restricted", slug="restricted", category=ResourceCategory.WHITEPAPER,
+        access_type="restricted", is_published=True, file=_doc(Visibility.PRIVATE),
+    )
+    assert api.get(f"{PUBLIC}restricted/download/").status_code == 403
+
+    member = grant(User.objects.create_user(email="kb@mds.example", password="x"), "view_resource")
+    api.force_login(member)
+    resp = api.get(f"{PUBLIC}restricted/download/")
+    assert resp.status_code == 200
+    r.refresh_from_db()
+    assert r.download_count == 1
+
+
+@pytest.mark.django_db
+def test_download_404_when_no_file(api, brochure):
+    assert api.get(f"{PUBLIC}company-brochure/download/").status_code == 404

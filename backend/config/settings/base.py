@@ -211,6 +211,22 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# --- Document storage & signed access (docs/FILE_STORAGE.md) --------------
+# The `StorageBackend` abstraction (apps.documents.storage) sits over
+# Django's `STORAGES["default"]`. `LocalSignedStorage` is the dev/test
+# backend: it stores through `default_storage` and mints HMAC-signed,
+# time-limited URLs served by the `/api/v1/files/` transfer views —
+# standing in for an object store's presigned PUT / GET. Production sets
+# `DOCUMENT_STORAGE_BACKEND` to the S3 backend and points `default` at
+# `django-storages`; nothing else in the app changes.
+DOCUMENT_STORAGE_BACKEND = env(
+    "DOCUMENT_STORAGE_BACKEND", default="apps.documents.storage.LocalSignedStorage"
+)
+DOCUMENT_DOWNLOAD_URL_TTL = env.int("DOCUMENT_DOWNLOAD_URL_TTL", default=300)   # 5 min
+DOCUMENT_UPLOAD_URL_TTL = env.int("DOCUMENT_UPLOAD_URL_TTL", default=900)       # 15 min
+DOCUMENT_PRIVATE_PREFIX = env("DOCUMENT_PRIVATE_PREFIX", default="private")
+DOCUMENT_PUBLIC_PREFIX = env("DOCUMENT_PUBLIC_PREFIX", default="public")
+
 # --- Career-application résumé uploads --------------------------------------
 # The public career-application endpoint is the only place an anonymous
 # user puts a file into the system, so every check is server-side and the

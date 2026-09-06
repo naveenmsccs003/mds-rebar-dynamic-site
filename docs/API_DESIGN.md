@@ -230,6 +230,48 @@ CLOSED (+ SPAM), with an illegal move returning `INVALID_TRANSITION`
 to `change_quoterequest`); → CLOSED needs `close_<model>`. Every change
 writes a `quote_request.updated` / `enquiry.updated` audit row.
 
+## Documents / Media endpoints (Phase 10 — implemented)
+
+Storage sits behind `apps.documents.storage` (`DOCUMENT_STORAGE_BACKEND`):
+`LocalSignedStorage` in dev/test (bytes via `STORAGES["default"]`,
+`django.core.signing` tokens, the `/api/v1/files/` transfer views),
+`S3SignedStorage` in production (boto3 presigned URLs). Every object key
+is random; private is the default; a file is not downloadable until the
+scan marks it `processed`.
+
+Admin — session auth + `documents.*` permissions:
+```
+POST /api/v1/admin/documents/upload/            documents.add_document
+     body {category: resume|document|image, filename, size, content_type?, visibility?}
+     -> 201 {document: <uuid>, upload: {url, method, headers, expires_in}}
+POST /api/v1/admin/documents/{uuid}/complete/   documents.add_document (owner / change_document)
+     -> confirms the object landed, records size + checksum, queues the scan
+```
+The client PUTs the bytes to `upload.url` (a presigned S3 PUT in prod; a
+signed `/api/v1/files/u/{token}/` in dev), then calls `complete`.
+
+Download — auth-aware, one shape for every private file:
+```
+GET /api/v1/documents/{uuid}/download/          -> {url, expires_in}
+```
+`can_download`: a `public` document is open; a `private` one needs
+ownership or `documents.view_document`. On success a `DownloadLog` row
+(who / when / IP / UA) and a `document.downloaded` audit row are written
+and a short-lived (`DOCUMENT_DOWNLOAD_URL_TTL`, default 300 s) signed URL
+is returned — `403` if not allowed, `409` (`NOT_READY`) while the scan is
+pending.
+
+Wired into earlier phases:
+```
+GET /api/v1/resources/{slug}/download/          public open; restricted needs resources.view_resource;
+                                                bumps download_count through this path only
+GET /api/v1/admin/career-applications/{id}/resume/   HR (view_jobapplication) -> signed résumé URL, logged
+GET/POST/PATCH/DELETE /api/v1/admin/media/      media.*_mediaasset — wraps a public Document with alt/caption/dims
+```
+Content APIs (`services`, `portfolio`, `news`, `resources`) now return a
+resolved `image.url` (stable signed URL) in every `MediaRef`, `null`
+until the asset is scanned.
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

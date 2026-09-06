@@ -19,4 +19,10 @@ export interface ResourceListItem {
   published_date: string | null;
   external_url: string;
   thumbnail: MediaRef | null;
+  has_file: boolean;
+}
+
+export interface DownloadTicket {
+  url: string;
+  expires_in: number | null;
 }

@@ -8,6 +8,7 @@ import { Link, useParams } from "react-router-dom";
 import { ApiRequestError } from "../../api/request";
 import { Breadcrumbs } from "../../components/Breadcrumbs/Breadcrumbs";
 import { Container } from "../../components/Container/Container";
+import { MediaImage } from "../../components/MediaImage/MediaImage";
 import { PageState } from "../../components/PageState/PageState";
 import { RichText } from "../../components/RichText/RichText";
 import { SEOHead } from "../../components/SEOHead/SEOHead";
@@ -56,8 +57,8 @@ function ProjectBody({ project }: { project: ProjectDetail }) {
         <Section ariaLabel="Project images">
           <ul className="project-gallery">
             {project.images.map((img, i) => (
-              <li key={i} className="project-gallery__item" aria-label={img.image.alt_text || "Project image"}>
-                <span className="project-gallery__placeholder">{img.image.alt_text || "Image"}</span>
+              <li key={i} className="project-gallery__item">
+                <MediaImage media={img.image} fallbackAlt="Project image" />
                 {img.image.caption && <p className="project-gallery__caption">{img.image.caption}</p>}
               </li>
             ))}

@@ -14,11 +14,15 @@ created through the public endpoint.
 """
 from __future__ import annotations
 
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.documents import services as documents
+from apps.documents.exceptions import FileNotReady
 from apps.permissions.permissions import HasRequiredPermissions
 from config.api_responses import ok
 
@@ -78,10 +82,32 @@ class JobApplicationAdminViewSet(
     required_permissions_map = {
         "list": ["applications.view_jobapplication"],
         "retrieve": ["applications.view_jobapplication"],
+        "resume": ["applications.view_jobapplication"],
         "update": ["applications.change_jobapplication"],
         "partial_update": ["applications.change_jobapplication"],
         "destroy": ["applications.delete_jobapplication"],
     }
+
+    @action(detail=True, methods=["get"])
+    def resume(self, request, pk=None):
+        """Short-lived signed URL for the applicant's résumé. HR is
+        already authorized by `view_jobapplication`; the download is
+        still logged (`DownloadLog` + audit) and refused while the file
+        is still being scanned."""
+        application = self.get_object()
+        if not application.resume_id:
+            return Response(
+                {"success": False, "error": {"code": "NOT_FOUND",
+                                             "message": "No résumé on file.", "fields": {}}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            payload = documents.issue_download(
+                application.resume, user=request.user, request=request, skip_authz=True
+            )
+        except documents.DownloadNotReady:
+            raise FileNotReady("The résumé is still being scanned.") from None
+        return ok(payload)
 
     def perform_update(self, serializer):
         instance = serializer.instance

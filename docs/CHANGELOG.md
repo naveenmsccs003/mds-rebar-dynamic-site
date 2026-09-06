@@ -290,3 +290,55 @@
     `manage.py check` clean. Frontend `lint` / `test` (66 pass) /
     `build` green.
   - `docs/API_DESIGN.md` + `docs/DATABASE_DESIGN.md` updated.
+- Phase 10 (Documents + Media): the storage abstraction, presigned-style
+  upload, private signed download, and download logging that phases 5–9
+  deferred here.
+  - `apps.documents.storage` — `get_storage()` returns the backend named
+    by `DOCUMENT_STORAGE_BACKEND`. `LocalSignedStorage` (dev/test) stores
+    through `STORAGES["default"]` and mints `django.core.signing` tokens
+    verified by the `/api/v1/files/{u,d}/{token}/` transfer views;
+    `S3SignedStorage` (production) uses `django-storages` + boto3
+    presigned URLs, imported lazily. `private/…` vs `public/…` key
+    prefixes; visibility + signing gate access.
+  - `apps.documents.validation` — per-category policies (`resume` /
+    `document` / `image`): size ceiling, extension allow-list,
+    leading-byte signature sniff. The résumé policy still reads the
+    `RESUME_UPLOAD_*` settings. `apps.applications.uploads` is now a thin
+    adapter over this (keeps the `resume` error-field name).
+  - `apps.documents.services` — `store_bytes` (direct server-side store),
+    `issue_upload` / `finalize_upload` (declared upload → ticket → the
+    client PUTs → confirm + checksum + queue scan), `issue_download`
+    (authz → `DownloadLog` + `document.downloaded` audit → short-lived
+    signed URL; `409 NOT_READY` while `pending`), `public_url` (stable
+    signed URL for a public processed asset). `documents.scan_document`
+    (Celery) is the malware-scan hook — a detection deletes the object
+    and marks the row `failed`; nothing downloads while `pending`.
+  - Endpoints: `POST /api/v1/admin/documents/upload/` +
+    `{uuid}/complete/` (`documents.add_document`);
+    `GET /api/v1/documents/{uuid}/download/` (auth-aware). Media admin
+    API `GET/POST/PATCH/DELETE /api/v1/admin/media/` (`media.*_mediaasset`)
+    — a `MediaAsset` wraps a public `Document` and exposes its resolved
+    `url`. `MediaRefSerializer` gained `url` across every content API
+    (`null` until scanned).
+  - Wired into earlier phases: `GET /api/v1/resources/{slug}/download/`
+    (public open; `restricted` needs `resources.view_resource`;
+    `download_count` only ever moves through this authorized path);
+    `GET /api/v1/admin/career-applications/{id}/resume/` (HR signed
+    résumé URL, logged, `409` before the scan clears).
+  - Frontend: `MediaImage` component (real `<img>` when the asset has a
+    `url`, labelled placeholder otherwise) used in the portfolio
+    gallery; `MediaRef` type gained `url`. Resources list gained a
+    Download action per file-bearing resource — resolves the signed URL
+    at click time and navigates to it, explains a `403` on a restricted
+    resource.
+  - `conftest.py` resets `InMemoryStorage` around every test. Test
+    settings already route `STORAGES["default"]` to it, so no upload
+    touches disk.
+  - 20 backend + 7 frontend tests (storage round-trip, token expiry,
+    validation, upload→PUT→complete→scan, download authz matrix +
+    `DownloadLog` + serving bytes, failed-scan cleanup, media URL
+    resolution, resource + résumé download). Backend: 219 passed, 1
+    skipped; `manage.py check` clean. Frontend `lint` / `test`
+    (73 pass) / `build` green.
+  - `docs/API_DESIGN.md`, `docs/FILE_STORAGE.md`, `docs/SECURITY.md`
+    updated.

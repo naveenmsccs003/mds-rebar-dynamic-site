@@ -25,6 +25,7 @@ const res = (o: Partial<ResourceListItem>): ResourceListItem => ({
   published_date: null,
   external_url: "https://example.com/brochure.pdf",
   thumbnail: null,
+  has_file: false,
   ...o,
 });
 

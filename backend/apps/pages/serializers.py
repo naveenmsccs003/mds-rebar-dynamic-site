@@ -33,16 +33,23 @@ class PlainTextField(serializers.CharField):
 
 
 class MediaRefSerializer(serializers.Serializer):
-    """Lightweight image reference shared by every content API. The
-    resolved file URL arrives with the object-storage layer (Phase 10);
-    until then clients render from `alt_text` / dimensions and treat a
-    missing URL gracefully."""
+    """Lightweight image reference shared by every content API. `url` is
+    a stable signed URL to the underlying public file (Phase 10); it is
+    `null` while the upload is still being scanned, so clients must still
+    render gracefully from `alt_text` / dimensions."""
 
     id = serializers.IntegerField()
+    url = serializers.SerializerMethodField()
     alt_text = serializers.CharField()
     caption = serializers.CharField()
     width = serializers.IntegerField(allow_null=True)
     height = serializers.IntegerField(allow_null=True)
+
+    def get_url(self, obj) -> str | None:
+        from apps.documents.services import public_url
+
+        document = getattr(obj, "document", None)
+        return public_url(document)
 
 
 class NamedSlugRefSerializer(serializers.Serializer):

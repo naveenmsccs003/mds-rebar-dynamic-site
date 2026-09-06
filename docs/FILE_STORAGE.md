@@ -20,6 +20,17 @@ does not touch application code. Public buckets/prefixes serve
 CDN-cached published assets (images used on public pages); a separate
 private bucket/prefix holds anything requiring authorization.
 
+**Implemented (Phase 10):** `apps.documents.storage` — `get_storage()`
+returns the backend named by `DOCUMENT_STORAGE_BACKEND`.
+`LocalSignedStorage` (dev/test) stores bytes through
+`STORAGES["default"]` and mints `django.core.signing` tokens verified by
+the `/api/v1/files/{u,d}/{token}/` transfer views — standing in for an
+object store's presigned PUT / GET. `S3SignedStorage` (production) uses
+`django-storages` + boto3 presigned URLs; its imports are lazy so the
+dependency is only needed where it is selected. `private/…` and
+`public/…` key prefixes replace separate buckets in the local backend;
+visibility + signed access are what actually gate a private file.
+
 ## Metadata (PostgreSQL) vs. bytes (object storage)
 The DB never stores file bytes — only: object key (randomized, not the
 original filename), original filename (metadata only), owner, content
@@ -37,6 +48,16 @@ Never a predictable path like `/files/123/resume.pdf`. Access requires:
    permissions/ownership.
 2. A short-lived signed URL issued only after that check passes.
 3. A `DownloadLog` entry (who, when, IP/user-agent) written on issuance.
+
+**Implemented (Phase 10):** `apps.documents.services.issue_download` —
+`can_download(user, document)` (public → open; private → owner or
+`documents.view_document`), then a `DownloadLog` row + a
+`document.downloaded` audit row, then a `DOCUMENT_DOWNLOAD_URL_TTL`
+(default 5 min) signed URL. `GET /api/v1/documents/{uuid}/download/` is
+the generic entry; `resources/{slug}/download/` and
+`admin/career-applications/{id}/resume/` are the caller-authorized
+variants (they pass `skip_authz=True` after their own check but still
+log). A `pending` document returns `409 NOT_READY`.
 
 ## Resume handling (career applications)
 Same rules as any private file, plus: private storage only, randomized

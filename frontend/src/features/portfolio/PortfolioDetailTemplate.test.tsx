@@ -35,7 +35,12 @@ const detail = (o: Partial<ProjectDetail> = {}): ProjectDetail => ({
   description: "<p>A <strong>landmark</strong> tower.</p>",
   services: [{ id: 1, name: "Rebar Detailing", slug: "rebar-detailing" }],
   technology: [{ id: 2, name: "Tekla", slug: "tekla" }],
-  images: [{ image: { id: 1, alt_text: "Facade", caption: "North face", width: null, height: null }, display_order: 0 }],
+  images: [
+    {
+      image: { id: 1, url: null, alt_text: "Facade", caption: "North face", width: null, height: null },
+      display_order: 0,
+    },
+  ],
   documents: [{ id: 1, label: "Method statement", is_public: true }],
   seo_title: "",
   seo_description: "",

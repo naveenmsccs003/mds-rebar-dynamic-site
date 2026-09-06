@@ -18,25 +18,24 @@ from .models import Resource
 
 class ResourceListSerializer(serializers.ModelSerializer):
     thumbnail = MediaRefSerializer(read_only=True)
+    has_file = serializers.SerializerMethodField()
 
     class Meta:
         model = Resource
         fields = [
             "id", "title", "slug", "description", "category", "access_type",
-            "published_date", "external_url", "thumbnail",
-        ]
-
-
-class ResourceDetailSerializer(ResourceListSerializer):
-    has_file = serializers.SerializerMethodField()
-
-    class Meta(ResourceListSerializer.Meta):
-        fields = ResourceListSerializer.Meta.fields + [
-            "download_count", "has_file", "seo_title", "seo_description", "updated_at",
+            "published_date", "external_url", "thumbnail", "has_file",
         ]
 
     def get_has_file(self, obj) -> bool:
         return obj.file_id is not None
+
+
+class ResourceDetailSerializer(ResourceListSerializer):
+    class Meta(ResourceListSerializer.Meta):
+        fields = ResourceListSerializer.Meta.fields + [
+            "download_count", "seo_title", "seo_description", "updated_at",
+        ]
 
 
 class ResourceAdminSerializer(serializers.ModelSerializer):
