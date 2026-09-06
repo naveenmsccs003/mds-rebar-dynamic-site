@@ -68,10 +68,7 @@ DJANGO_APPS = [
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + DOMAIN_APPS
 
-# A custom user model (apps.users.User, email-based) is introduced in
-# Phase 2 (Database Foundation) *before* any migration is ever run against
-# a real database — swapping AUTH_USER_MODEL after migrations exist is
-# destructive, so it is a deliberate Phase 2 decision, not made here.
+AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

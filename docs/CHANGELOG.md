@@ -15,3 +15,19 @@
   TypeScript + Vite frontend scaffold with feature-based folder
   structure; Docker Compose for local development; environment variable
   templates; base CI workflow; `.gitignore`; root `README.md`.
+- Phase 2 (Database Foundation): custom `users.User` model (email login,
+  brute-force-protection fields) wired as `AUTH_USER_MODEL`; the ten
+  RBAC roles from `docs/RBAC_DESIGN.md` seeded as Django Groups via a
+  data migration; real models + migrations + Django admin registration
+  for every domain app (pages/CMS with generic version history and a
+  shared `PublishableContent` base for News/Blog/Event/CSR, services,
+  industries, markets, portfolio, resources, careers, applications,
+  quotations, contact/enquiries, testimonials, clients, technology,
+  csr, legal, documents/media, notifications, audit); atomic, race-safe
+  public reference number generation for quotes (`MDS-Q-...`) and
+  enquiries (`MDS-E-...`); 41 backend tests (model constraints,
+  custom user manager, admin changelist/add-page smoke tests across
+  every registered model, and the reference-generator concurrency test)
+  — verified against both SQLite and a real PostgreSQL 16 instance.
+  `docs/DATABASE_DESIGN.md` updated with the handful of deliberate
+  deviations made during implementation.

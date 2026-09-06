@@ -1,3 +1,11 @@
 from django.db import models
 
-# Create your models here.
+from apps.pages.models import PublishableContent
+
+
+class News(PublishableContent):
+    category = models.CharField(max_length=100, blank=True)
+
+    class Meta(PublishableContent.Meta):
+        db_table = "news_news"
+        permissions = [("publish_news", "Can publish news")]

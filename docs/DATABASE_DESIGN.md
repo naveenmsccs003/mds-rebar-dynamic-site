@@ -160,6 +160,49 @@ app at a time, in the order listed in `DEVELOPMENT_PHASES.md`.
   query so the call sites don't know whether they're hitting Postgres FTS
   or a future external search engine.
 
+## Implementation notes (Phase 2)
+
+A few deliberate deviations from the plan above, made while implementing
+it and left here so the plan and the code don't drift apart silently:
+
+- **`OfficeContact` was dropped.** `Office` already carries `phone` and
+  `email`; a separate contact table would have been speculative until a
+  real "multiple contacts per office" requirement shows up (spec §56
+  "avoid premature abstraction").
+- **`MediaAsset` (in `media`) wraps `documents.Document`** rather than
+  duplicating file metadata: `Document` is the generic, storage-agnostic
+  file record (used directly for resumes/brochures/private files);
+  `MediaAsset` adds the presentational fields images need (alt text,
+  caption, width/height) via a one-to-one. Anywhere the plan says an
+  "image" FK (service hero image, project image, featured image, OG
+  image, logos), the model points at `MediaAsset`, not `Document`
+  directly.
+- **`News`/`Blog`/`Event`/`CSRPost`** are concrete Django models that
+  each inherit an abstract `PublishableContent` (in `pages`), rather than
+  a single generic-content-type table — simpler to query and index per
+  content type, and Django's abstract-base-class inheritance already
+  gives the "define once" property the plan was after. A shared `Tag`
+  model (in `pages`) is M2M'd from each.
+- **Publish permissions use Django's `Meta.permissions`**, e.g.
+  `services.publish_service`, rather than a separately modeled
+  permission registry — this is the idiomatic Django way to get a
+  queryable `auth.Permission` row per action without inventing a parallel
+  system (see `docs/RBAC_DESIGN.md`).
+- **`roles`, `permissions`, `accounts`, `analytics`, `search` have no
+  models yet**, by design: `roles` only ships a data migration seeding
+  the ten groups from `docs/RBAC_DESIGN.md`; `permissions` will hold DRF
+  permission classes (Phase 3); `accounts` will hold auth *views*, not
+  models (Django's built-in password-reset token generator needs no
+  storage); `analytics` rollup tables and `search`'s `SearchVectorField`
+  columns are added in the phases that actually consume them (14 and 11
+  respectively) rather than guessed at now.
+- **Quote/enquiry reference generation** (`MDS-Q-...` / `MDS-E-...`) is
+  implemented exactly as planned — a per-year counter row locked with
+  `select_for_update()` inside a transaction — and was verified against
+  a real PostgreSQL instance (not just SQLite, which has no real
+  row-level locking) with 8 concurrent threads racing for the same
+  year's counter and receiving 8 distinct, sequential references.
+
 ## Performance rules applied throughout
 - `select_related` for FK, `prefetch_related` for M2M/reverse-FK, on every
   list/detail queryset.
