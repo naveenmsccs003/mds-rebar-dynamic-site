@@ -29,3 +29,21 @@ time for crawlers/social previews — evaluated in Phase 5 whether this
 requires SSR/prerendering for the marketing pages (recommended) versus
 client-only rendering, since a pure client-rendered SPA cannot reliably
 serve per-page OG tags to crawlers/social scrapers.
+
+### Decision (Phase 5)
+The public site is a client-rendered Vite/React SPA. Per-page metadata is
+owned by the `SEOHead` component (`title` / description / canonical /
+OG / Twitter), which relies on **React 19's built-in `<title>` / `<meta>`
+/ `<link>` hoisting** — no `react-helmet`. Exactly one page renders per
+route, so there is one `SEOHead` mounted at a time; navigation unmounts
+the previous page and removes its tags.
+
+This is correct for JS-capable clients and modern crawlers (Googlebot
+executes JS), but a raw fetch of `index.html` still returns the shell's
+generic `<head>`. So **build-time prerendering of the marketing routes**
+(`/`, `/about`, `/services`, `/services/*`, `/portfolio*`, `/news*`,
+`/blogs*`, `/events*`, `/csr`, `/careers*`, `/legal/*`) is planned for
+the deploy pipeline (Phase 15) — a prerender step (`vite-plugin-prerender`
+/ `react-snap` / a hosted prerender service keyed off the sitemap) that
+writes static HTML with the resolved `<head>` per route, with the SPA
+hydrating on top. Admin routes are never prerendered or indexed.

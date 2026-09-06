@@ -1,13 +1,18 @@
 import { createBrowserRouter } from "react-router-dom";
 
+import { AboutPage } from "../features/about/AboutPage";
+import { HomePage } from "../features/home/HomePage";
+import { LegalPage } from "../features/legal/LegalPage";
 import { PublicLayout } from "../layouts/PublicLayout";
+import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 
 /**
- * Route table matching the public navigation in the spec (§7). Every
- * entry is a PlaceholderPage until its owning phase (5-11) replaces it
- * with the real feature module — the route path/shape is decided now so
- * later phases build content, not routing.
+ * Route table matching the public navigation in the spec (§7). Phase 5
+ * fills in the CMS-driven pages (home, about, legal/*, 404); the
+ * remaining routes stay `PlaceholderPage` until their owning phase
+ * (services → 6, portfolio/news/blogs/events → 7, careers → 8,
+ * contact/quote → 9, search → 11, admin/logins → 3/12 frontend work).
  *
  * Services/Portfolio/News/Blogs/Events detail routes use a single
  * `:slug` param feeding one reusable template component each (spec §10 —
@@ -18,8 +23,8 @@ export const router = createBrowserRouter([
     path: "/",
     element: <PublicLayout />,
     children: [
-      { index: true, element: <PlaceholderPage title="Home" /> },
-      { path: "about", element: <PlaceholderPage title="About" /> },
+      { index: true, element: <HomePage /> },
+      { path: "about", element: <AboutPage /> },
       { path: "services", element: <PlaceholderPage title="Services" /> },
       { path: "services/:slug", element: <PlaceholderPage title="Service Detail" /> },
       { path: "portfolio", element: <PlaceholderPage title="Portfolio" /> },
@@ -39,11 +44,11 @@ export const router = createBrowserRouter([
       { path: "search", element: <PlaceholderPage title="Search" /> },
       { path: "login/staff", element: <PlaceholderPage title="Staff Login" /> },
       { path: "login/knowledge-base", element: <PlaceholderPage title="Knowledge Base Login" /> },
-      { path: "legal/privacy-policy", element: <PlaceholderPage title="Privacy Policy" /> },
-      { path: "legal/terms", element: <PlaceholderPage title="Terms & Conditions" /> },
-      { path: "legal/nda", element: <PlaceholderPage title="NDA / Confidentiality" /> },
-      { path: "legal/data-security", element: <PlaceholderPage title="Data Security & Compliance" /> },
-      { path: "*", element: <PlaceholderPage title="Page Not Found" /> },
+      { path: "legal/privacy-policy", element: <LegalPage slug="privacy-policy" /> },
+      { path: "legal/terms", element: <LegalPage slug="terms" /> },
+      { path: "legal/nda", element: <LegalPage slug="nda" /> },
+      { path: "legal/data-security", element: <LegalPage slug="data-security" /> },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
   {

@@ -43,6 +43,23 @@ Every component: keyboard operable, visible focus ring, correct ARIA
 role/label, sufficient color contrast (WCAG 2.2 AA), and documented
 loading/empty/error states where it renders remote data.
 
+### Implemented so far (Phase 5)
+`Button`, `LoadingState`, `EmptyState`, `ErrorState` (Phase 1) plus
+`Container` (max-width + gutters), `Section` (full-bleed band with
+`tone="default|muted|dark"`), `Card`, `Breadcrumbs`, `Skeleton`,
+`SEOHead` (React 19 native `<title>`/`<meta>` hoisting — see
+`docs/SEO.md`), `RichText` (client-side DOMPurify re-sanitisation of the
+already-server-sanitised CMS HTML), and `PageState` (collapses a
+TanStack Query result into the four required data states). Design tokens
+(colour, 4/8px spacing scale, 12→64px type scale, container widths) live
+in `src/index.css`. The homepage/about/legal pages render through
+`features/cms/` — `SectionRenderer` maps `PageSection.section_key` to a
+section component (`hero`, `prose`, `cta`, `card_grid`, `stat_list`, with
+a safe fallback) in the API's `display_order`, so editors reorder/hide
+sections from the CMS without a frontend deploy. Remaining components
+(forms, Table, Modal, Tabs, FileUpload, admin `ListPageTemplate`, …)
+land with the features that first need them (Phases 6–12).
+
 ## Page templates (reused, not duplicated per content item)
 - `ServiceDetailTemplate` — renders any service from its DB record
   (breadcrumb → hero → overview → capabilities → process → business

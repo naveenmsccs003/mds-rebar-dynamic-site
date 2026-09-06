@@ -92,3 +92,41 @@
     suite: 126 passed, 1 skipped. Verified on SQLite (no PostgreSQL
     client in the build env); no PG-specific SQL introduced.
   - `docs/API_DESIGN.md` and `docs/DATABASE_DESIGN.md` updated.
+- Phase 5 (Public Website): the public homepage, About page and the four
+  legal pages, rendered from the Phase 4 CMS API — no page content
+  hardcoded in React.
+  - `features/cms/`: `usePage(pageKey)` (TanStack Query) → `getPage` →
+    `GET /api/v1/pages/{page_key}/`; `SectionRenderer` maps
+    `PageSection.section_key` to a section component (`hero`, `prose`,
+    `cta`, `card_grid`, `stat_list`, with a safe `FallbackSection`) in
+    the API's `display_order`, so editors reorder/hide/edit sections from
+    the CMS without a frontend deploy (docs/UI_DESIGN_SYSTEM.md homepage
+    section order). `CmsPage` wires SEO + the four data states around it.
+  - Pages: `HomePage` (`home`), `AboutPage` (`about`), `LegalPage`
+    (one component for `legal-privacy-policy` / `-terms` / `-nda` /
+    `-data-security`), `NotFoundPage`. Routes wired in `app/router.tsx`;
+    the rest stay `PlaceholderPage` until their phase.
+  - Design system: `Container`, `Section` (default/muted/dark bands),
+    `Card`, `Breadcrumbs`, `Skeleton`, `PageState` (Loading/Success/
+    Empty/Error+Retry in one wrapper), `SEOHead` (React 19 native
+    `<title>`/`<meta>`/`<link>` hoisting — no react-helmet), `RichText`
+    (client-side DOMPurify re-sanitisation of the already
+    server-sanitised CMS HTML, per docs/SECURITY.md "again before
+    render"). Design tokens (colour, 4/8px spacing, 12→64px type scale,
+    container widths) in `src/index.css`.
+  - `PublicLayout`: skip link, labelled `Primary` nav + a keyboard
+    -operable mobile menu toggle (`aria-expanded`/`aria-controls`),
+    focus moved to `<main>` on route change, footer nav columns. Nav
+    items are a static typed list (`layouts/navItems.ts`) — a
+    CMS-managed navigation model is a later enhancement.
+  - `api/request.ts`: shared envelope-unwrapping wrapper
+    (`apiGet`/`apiPost`/… → `T` or a typed `ApiRequestError`) that every
+    later feature's API module builds on.
+  - `dompurify` added as a dependency.
+  - 22 new frontend tests (SEOHead, RichText, PageState, SectionRenderer,
+    HomePage data states, PublicLayout a11y). `npm run lint` / `test` /
+    `build` all green — 25 tests pass.
+  - Rendering decision recorded in `docs/SEO.md`: client-rendered SPA
+    now, build-time prerendering of the marketing routes planned for the
+    deploy pipeline (Phase 15). `docs/UI_DESIGN_SYSTEM.md` updated with
+    the implemented components.
