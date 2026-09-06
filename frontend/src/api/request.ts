@@ -71,6 +71,22 @@ export function apiPost<T>(url: string, body?: unknown): Promise<T> {
   return unwrap<T>(apiClient.post(url, body));
 }
 
+/**
+ * POST a `multipart/form-data` body (file uploads — the career
+ * application résumé). The shared client defaults to a JSON content
+ * type, so it is cleared here and axios sets the multipart boundary
+ * itself. `headers` lets a caller add e.g. an `Idempotency-Key`.
+ */
+export function apiPostForm<T>(
+  url: string,
+  form: FormData,
+  headers?: Record<string, string>,
+): Promise<T> {
+  return unwrap<T>(
+    apiClient.post(url, form, { headers: { "Content-Type": "multipart/form-data", ...headers } }),
+  );
+}
+
 export function apiPatch<T>(url: string, body?: unknown): Promise<T> {
   return unwrap<T>(apiClient.patch(url, body));
 }

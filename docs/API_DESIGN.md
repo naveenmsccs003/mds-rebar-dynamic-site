@@ -148,6 +148,47 @@ Admin — session auth + `<app>.*_<model>` permissions
 replace-all; News `author` is set from the request user on create and
 `tags` are assigned by id. Portfolio/News reuse `apps.pages.api_mixins`.
 
+## Careers / Applications endpoints (Phase 8 — implemented)
+
+Public — no auth:
+```
+GET  /api/v1/careers/                active postings, hides past-deadline;
+                                     ?department= ?employment_type= ?location= ?q=
+GET  /api/v1/careers/{slug}/         full posting; still resolves for a closed posting
+                                     (response carries `is_open: false`) so a stale link
+                                     shows "applications closed" instead of 404;
+                                     `skills_list` is the parsed `skills` CSV
+POST /api/v1/career-applications/    multipart; throttle scope `career-applications`
+```
+`POST /career-applications/` fields: `job` (posting slug), `name`, `email`,
+`phone?`, `cover_letter?`, `additional_info?`, `resume` (file), plus a
+hidden `website` honeypot. An `Idempotency-Key` header replays the
+original result. Résumé rules are enforced **server-side, always**
+(docs/FILE_STORAGE.md, docs/SECURITY.md): `RESUME_UPLOAD_MAX_BYTES`
+(default 5 MB), extension allow-list `pdf`/`doc`/`docx`, and leading-byte
+content sniffing — the browser's filename and `Content-Type` are not
+trusted. On success: `201` `{ "reference": "<uuid>", "status": "new" }`
+(and `{ "reference": null }` with `200` for a closed posting or a
+honeypot hit — no error is surfaced to a bot). Errors: `VALIDATION_ERROR`
+(400, field `resume` / `job` / …), `RATE_LIMITED` (429).
+
+Admin — session auth + `applications.*_jobapplication` permissions:
+```
+GET/POST/PATCH/DELETE /api/v1/admin/careers/               (careers.*_jobposting; CRUD, no workflow)
+GET    /api/v1/admin/career-applications/                  (view_jobapplication; ?status= ?job=)
+GET    /api/v1/admin/career-applications/{id}/             (view_jobapplication)
+PATCH  /api/v1/admin/career-applications/{id}/             (change_jobapplication; status / assigned_to only)
+DELETE /api/v1/admin/career-applications/{id}/             (delete_jobapplication)
+```
+There is no admin `POST` for applications — they are only ever created
+through the public endpoint. Every applicant-submitted field and the
+résumé are read-only on the admin serializer; it exposes
+`resume_filename` / `resume_status` but **no download URL** (the
+authorized signed-URL path is Phase 10, and HR tooling must not offer a
+download while `resume_status` is `pending`). Submissions write an
+`application.submitted` audit row; status / assignment changes write
+`application.updated`.
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

@@ -43,6 +43,20 @@ Same rules as any private file, plus: private storage only, randomized
 filename, no execution of uploaded content, and a defined path to attach
 malware scanning before HR ever opens the file.
 
+**Phase 8 (implemented, interim):** `POST /api/v1/career-applications/`
+accepts the file directly as multipart (there is no object-storage
+backend to presign against yet). `apps.applications.uploads`:
+`validate_resume()` — size ceiling, extension allow-list
+(`pdf`/`doc`/`docx`), leading-byte content sniff; `store_resume()` —
+SHA-256 checksum, random-UUID object key under
+`RESUME_UPLOAD_STORAGE_PREFIX` (`private/resumes/`), a `Document` row
+with `visibility=private`, `status=pending`, and `owner=None`;
+`scan_hook(document)` is the no-op the Phase 10 async malware scan
+replaces (it flips `status` to `processed` / `failed`). The admin API
+exposes `resume_status` but never a download link — the authorized
+signed-URL path is Phase 10, and a `pending` document must not be
+downloadable.
+
 ## Restricted resources
 Resource records with `access_type=restricted` resolve to a signed URL
 generated per request rather than a static download link; download

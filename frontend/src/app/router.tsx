@@ -1,6 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { AboutPage } from "../features/about/AboutPage";
+import { CareersListPage } from "../features/careers/CareersListPage";
+import { JobDetailTemplate } from "../features/careers/JobDetailTemplate";
 import { HomePage } from "../features/home/HomePage";
 import { LegalPage } from "../features/legal/LegalPage";
 import { NewsArticlePage } from "../features/news/NewsArticlePage";
@@ -17,9 +19,10 @@ import { PlaceholderPage } from "../pages/PlaceholderPage";
 /**
  * Route table matching the public navigation in the spec (§7). Filled in
  * by phase: home/about/legal/404 (Phase 5), services (Phase 6),
- * portfolio/resources/news (Phase 7). The remaining routes stay
- * `PlaceholderPage` until their owning phase (blogs/events/csr → 7-later,
- * careers → 8, contact/quote → 9, search → 11, admin/logins → later).
+ * portfolio/resources/news (Phase 7), careers (Phase 8). The remaining
+ * routes stay `PlaceholderPage` until their owning phase
+ * (blogs/events/csr → 7-later, contact/quote → 9, search → 11,
+ * admin/logins → later).
  *
  * Services/Portfolio/News/Blogs/Events detail routes use a single
  * `:slug` param feeding one reusable template component each (spec §10 —
@@ -44,8 +47,8 @@ export const router = createBrowserRouter([
       { path: "events", element: <PlaceholderPage title="Events" /> },
       { path: "events/:slug", element: <PlaceholderPage title="Event Detail" /> },
       { path: "csr", element: <PlaceholderPage title="CSR" /> },
-      { path: "careers", element: <PlaceholderPage title="Careers" /> },
-      { path: "careers/:slug", element: <PlaceholderPage title="Job Detail" /> },
+      { path: "careers", element: <CareersListPage /> },
+      { path: "careers/:slug", element: <JobDetailTemplate /> },
       { path: "contact", element: <PlaceholderPage title="Contact" /> },
       { path: "request-quote", element: <PlaceholderPage title="Request Quote" /> },
       { path: "search", element: <PlaceholderPage title="Search" /> },

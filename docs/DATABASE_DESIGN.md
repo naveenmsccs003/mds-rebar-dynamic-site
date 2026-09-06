@@ -106,11 +106,21 @@ app at a time, in the order listed in `DEVELOPMENT_PHASES.md`.
 
 ### `careers` / `applications`
 - `JobPosting` (title, department, location, employment_type, experience,
-  skills M2M or JSON, description, responsibilities, requirements,
-  benefits, application_deadline, is_active).
+  skills [comma-separated string], description, responsibilities,
+  requirements, benefits, application_deadline, is_active). `is_open`
+  property = `is_active and (no deadline or deadline not passed)` — the
+  public list hides closed postings, the public detail still renders them.
 - `JobApplication` (job FK, name, email, phone, resume FK→Document
-  [private], cover_letter, additional_info, uuid, status, ip_address,
-  user_agent). Resume storage per `FILE_STORAGE.md` security rules.
+  [private], cover_letter, additional_info, uuid, status, assigned_to FK,
+  ip_address, user_agent). **Phase 8 deviation:** added
+  `idempotency_key` (blank default, partial unique constraint on
+  non-blank values) so a replayed `POST /career-applications/` with an
+  `Idempotency-Key` header returns the original application rather than a
+  duplicate — `DATABASE_DESIGN` had only listed `idempotency_key` on
+  `QuoteRequest`. Résumé validation + storage is `apps.applications.
+  uploads` (server-side size / extension / content-sniff, randomised
+  object key); object storage + malware scan stay Phase 10, per
+  `FILE_STORAGE.md`.
 
 ### `quotations`
 - `QuoteRequest` (public_reference `MDS-Q-{year}-{seq:06d}` [unique,

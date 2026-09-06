@@ -40,6 +40,17 @@ metadata. Private files require an authorization check and a
 short-lived signed URL — never a predictable public path. See
 `FILE_STORAGE.md`.
 
+Phase 8 — the public career-application résumé is the first upload path.
+`apps.applications.uploads` enforces `RESUME_UPLOAD_MAX_BYTES`
+(default 5 MB), an extension allow-list (`pdf` / `doc` / `docx`), and a
+leading-byte signature check (`%PDF-`, OLE2, ZIP) so a mislabelled or
+disguised file is rejected; the stored key is a random UUID under a
+private prefix, and the `Document` is left `status=pending`. `libmagic`
+is intentionally not a dependency — the signature check covers the
+allowed types. Full MIME sniffing + malware scanning + presigned uploads
+land with object storage in Phase 10 (`uploads.scan_hook` is the
+attach point); the upload-validation audit is Phase 12.
+
 ## Rate limiting / anti-spam
 Throttling (Redis-backed) on login, password reset, quote/contact/career
 forms, uploads, search, and general public API traffic. Honeypot fields

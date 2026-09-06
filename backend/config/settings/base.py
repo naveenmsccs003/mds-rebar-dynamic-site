@@ -193,11 +193,40 @@ USE_TZ = True
 # --- Static & media -------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# `MEDIA_ROOT` is the local fallback storage location used until the
+# object-storage backend lands in Phase 10 (docs/FILE_STORAGE.md). It is
+# git-ignored (`/media/` in backend/.gitignore). Private uploads
+# (résumés) live under a non-guessable prefix within it and are never
+# served by a predictable public URL — access is the authorized
+# signed-URL path built in Phase 10.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 STORAGES = {
+    # `default` is intentionally left to Django's FileSystemStorage
+    # (MEDIA_ROOT) here; staging/production point it at object storage.
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- Career-application résumé uploads --------------------------------------
+# The public career-application endpoint is the only place an anonymous
+# user puts a file into the system, so every check is server-side and the
+# browser is never trusted (docs/SECURITY.md "File uploads",
+# docs/FILE_STORAGE.md "Resume handling"): the extension must be in the
+# allow-list AND the leading bytes must match that type; the stored
+# object key is randomised (never the uploaded filename); the file is
+# private and left PENDING for the Phase 10 malware-scan hook.
+RESUME_UPLOAD_MAX_BYTES = env.int("RESUME_UPLOAD_MAX_BYTES", default=5 * 1024 * 1024)
+RESUME_UPLOAD_ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"]
+RESUME_UPLOAD_STORAGE_PREFIX = env("RESUME_UPLOAD_STORAGE_PREFIX", default="private/resumes")
+
+# Where "new job application" notifications go. Empty in base/dev — the
+# actual send pipeline is Phase 9 (apps.notifications); until then a
+# queued NotificationLog row is written so the intent is auditable.
+CAREERS_NOTIFICATION_EMAIL = env("CAREERS_NOTIFICATION_EMAIL", default="")
 
 # --- REST framework ---------------------------------------------------------
 REST_FRAMEWORK = {

@@ -1,14 +1,16 @@
 """
-Job applications (spec §16). Resume handling follows docs/FILE_STORAGE.md
-/ docs/SECURITY.md: private storage, randomized object name via the
+Job applications (spec §16). Résumé handling follows docs/FILE_STORAGE.md
+/ docs/SECURITY.md: private storage, randomised object name via the
 related `documents.Document`, no trust in client-supplied filename/MIME.
-The actual upload/validation pipeline is Phase 10 — this model only
-records the resulting metadata.
+Server-side validation + storage of the upload is `apps.applications.
+uploads` (Phase 8); object storage, presigned uploads and malware
+scanning are Phase 10.
 """
 import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 from apps.careers.models import JobPosting
 from apps.documents.models import Document
@@ -38,6 +40,13 @@ class JobApplication(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
 
+    # Set from the `Idempotency-Key` request header (docs/API_DESIGN.md
+    # "Idempotency"): a replayed submission with the same key returns the
+    # original application instead of creating a duplicate. Blank when the
+    # client sent no key; the partial unique constraint below only
+    # applies to non-blank values.
+    idempotency_key = models.CharField(max_length=255, blank=True, default="", db_index=True)
+
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -46,6 +55,13 @@ class JobApplication(models.Model):
         db_table = "applications_jobapplication"
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["status", "-created_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["idempotency_key"],
+                condition=~Q(idempotency_key=""),
+                name="uniq_jobapplication_idempotency_key",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} -> {self.job.title}"

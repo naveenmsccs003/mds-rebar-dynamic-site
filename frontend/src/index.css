@@ -694,3 +694,65 @@ a:focus-visible,
 .article__back {
   margin-top: var(--space-5);
 }
+
+/* --- forms (career application; reused by contact/quote in Phase 9) - */
+.form {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--container-narrow);
+}
+.form__field {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+.form__field > span {
+  color: var(--color-text-muted);
+}
+.form__field input,
+.form__field textarea {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.form__field input:focus-visible,
+.form__field textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.form__field input[aria-invalid="true"],
+.form__field textarea[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+.form__field textarea {
+  resize: vertical;
+}
+.form__error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+.form__error--top {
+  margin: 0;
+}
+.form__success {
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  background: var(--color-surface-muted);
+}
+.form__success h3 {
+  margin-top: 0;
+}
+/* Keep the honeypot in the DOM and focusable-by-bots but off-screen for
+   people and assistive tech (the wrapper is aria-hidden). */
+.form__honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

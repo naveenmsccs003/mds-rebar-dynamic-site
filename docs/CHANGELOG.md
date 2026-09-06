@@ -190,3 +190,57 @@
     unused import in a Phase 6 test file (masked by tsc's incremental
     cache; a fresh checkout / CI build would have failed on it).
   - `docs/API_DESIGN.md` + `docs/UI_DESIGN_SYSTEM.md` updated.
+- Phase 8 (Careers + Applications): public job board + a secured
+  application form with résumé upload.
+  - Careers API: public `GET /api/v1/careers/` (`?department`
+    `?employment_type` `?location` `?q`; active and not-past-deadline
+    only) + `GET /api/v1/careers/{slug}/` (still resolves for a closed
+    posting so a stale link explains itself rather than 404s; exposes a
+    computed `is_open` and a parsed `skills_list`). Admin
+    `/api/v1/admin/careers/` CRUD gated by `careers.*_jobposting` — a
+    plain `is_active` flag, no publishing workflow. `JobPosting.is_open`
+    property added (active + deadline check).
+  - Application submission: public `POST /api/v1/career-applications/`
+    (multipart, `AllowAny`, `career-applications` throttle scope).
+    Résumé validation is entirely server-side (`apps.applications.
+    uploads`): size ceiling (`RESUME_UPLOAD_MAX_BYTES`, default 5 MB),
+    extension allow-list (`pdf` / `doc` / `docx`), and leading-byte
+    content sniffing so a non-PDF renamed `.pdf` (or an HTML/script
+    payload) is refused. The stored object key is a random UUID under a
+    private prefix — never the uploaded filename; a `documents.Document`
+    row records `original_filename` / `content_type` / `size` / SHA-256
+    checksum, `visibility=private`, `status=pending` for the Phase 10
+    malware-scan hook (`uploads.scan_hook`). Free-text fields are
+    tag-stripped before storage.
+  - Anti-spam / integrity (`apps.applications.services`): a hidden
+    `website` honeypot (silent fake-success, nothing created); an
+    `Idempotency-Key` header replays the original application (partial
+    unique constraint on `JobApplication.idempotency_key`, migration
+    `0002`); a same job + email submission within 10 minutes is treated
+    as a duplicate. Every submission writes an `application.submitted`
+    `AuditLog` row; a queued `NotificationLog` row is written when
+    `CAREERS_NOTIFICATION_EMAIL` is set (the sender itself is Phase 9).
+  - Admin workflow: `/api/v1/admin/career-applications/` (list /
+    retrieve / patch / delete, no create) gated by
+    `applications.*_jobapplication`; only `status` and `assigned_to` are
+    writable — every applicant-supplied field and the résumé are
+    read-only, and no download URL is exposed (that is the Phase 10
+    signed-URL path). Status / assignment changes write an
+    `application.updated` audit row.
+  - `STORAGES["default"]` left as `FileSystemStorage` with an explicit
+    git-ignored `MEDIA_ROOT`; test settings use `InMemoryStorage` so the
+    suite never touches disk. `apiPostForm` helper added to
+    `frontend/src/api/request.ts`.
+  - Frontend `features/careers/`: `CareersListPage` (FilterBar +
+    Pagination via `useListParams`), `JobDetailTemplate` (one template
+    per posting, inline `ApplicationForm`, disabled + explained when
+    closed), `ApplicationForm` (client-side name/email/résumé
+    type + size checks as a courtesy, hidden honeypot, server field
+    errors mapped back onto inputs, success state with the reference
+    UUID, fresh `Idempotency-Key` per attempt). Routes `/careers` +
+    `/careers/:slug` wired in; form styles added to `src/index.css`
+    (reused by contact/quote in Phase 9).
+  - 26 backend + 10 frontend tests. Backend: 180 passed, 1 skipped.
+    Frontend `lint` / `test` (59 pass) / `build` green.
+  - `docs/API_DESIGN.md`, `docs/DATABASE_DESIGN.md`, `docs/SECURITY.md`,
+    `docs/FILE_STORAGE.md` updated.

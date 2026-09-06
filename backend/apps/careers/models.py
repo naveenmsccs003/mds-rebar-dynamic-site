@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class EmploymentType(models.TextChoices):
@@ -35,3 +36,15 @@ class JobPosting(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    @property
+    def is_open(self) -> bool:
+        """Accepting applications: active and either no deadline or the
+        deadline has not passed. The public list hides closed postings;
+        the public detail still renders them but the application endpoint
+        refuses a submission (docs/DEVELOPMENT_PHASES.md Phase 8)."""
+        if not self.is_active:
+            return False
+        if self.application_deadline is None:
+            return True
+        return self.application_deadline >= timezone.now().date()
