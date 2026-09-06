@@ -64,6 +64,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sitemaps",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + DOMAIN_APPS
@@ -226,6 +227,12 @@ DOCUMENT_DOWNLOAD_URL_TTL = env.int("DOCUMENT_DOWNLOAD_URL_TTL", default=300)   
 DOCUMENT_UPLOAD_URL_TTL = env.int("DOCUMENT_UPLOAD_URL_TTL", default=900)       # 15 min
 DOCUMENT_PRIVATE_PREFIX = env("DOCUMENT_PRIVATE_PREFIX", default="private")
 DOCUMENT_PUBLIC_PREFIX = env("DOCUMENT_PUBLIC_PREFIX", default="public")
+
+# --- Search (docs/SEARCH.md) --------------------------------------------
+# "auto" picks PostgresSearchProvider on PostgreSQL and the portable
+# icontains SimpleSearchProvider elsewhere (the SQLite test suite). Force
+# one with "postgres" / "simple".
+SEARCH_PROVIDER = env("SEARCH_PROVIDER", default="auto")
 
 # --- Career-application résumé uploads --------------------------------------
 # The public career-application endpoint is the only place an anonymous

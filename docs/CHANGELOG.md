@@ -342,3 +342,40 @@
     (73 pass) / `build` green.
   - `docs/API_DESIGN.md`, `docs/FILE_STORAGE.md`, `docs/SECURITY.md`
     updated.
+- Phase 11 (SEO + Search): the global search API + provider abstraction,
+  plus sitemap / robots / structured data.
+  - `apps.search.providers` — `get_search_provider()` returns the backend
+    named by `SEARCH_PROVIDER` (`auto` → `PostgresSearchProvider` on
+    PostgreSQL, else `SimpleSearchProvider`). Postgres provider ranks a
+    weighted `SearchVector` (title A / summary B / body C) with
+    `SearchRank` against a plain `SearchQuery`, per searchable type
+    (vector computed per query — a persisted `SearchVectorField` + GIN
+    index is a Phase 14 follow-up and does not touch the interface).
+    Simple provider is a portable `icontains` sweep with a
+    title-hit-beats-body-hit score — what the SQLite test suite uses.
+    `SEARCHABLE` registry: `service` / `project` / `news` / `resource` /
+    `job`, each with its publish filter and `/…/{slug}` URL.
+  - `GET /api/v1/search/?q=&type=&page=` (`type` repeatable; `search`
+    throttle scope) — `q` under 2 chars returns empty + a message.
+    `data`: `{query, results: [{type, title, url, snippet, score}],
+    count, page, num_pages, page_size}`; `snippet` is tag-stripped.
+  - `/sitemap.xml` — `django.contrib.sitemaps` (`apps.pages.sitemaps`,
+    per-type `Sitemap` classes over published items + the static public
+    routes; `RequestSite` so URLs use the request host, `protocol=https`).
+    `/robots.txt` — `config.seo.robots_txt` disallows `/admin/`,
+    `/api/v1/admin/`, `/api/v1/files/`, `/api/v1/documents/`,
+    `/api/schema/`, `/api/docs/` and points at the sitemap.
+    `django.contrib.sitemaps` added to `INSTALLED_APPS` (no migrations).
+  - Frontend: `features/search/SearchPage` (query + type filter in the
+    URL, paginated, `noindex`) wired at `/search` (+ a nav link);
+    `components/JsonLd` — `<JsonLd>` emits one `application/ld+json`
+    block (angle brackets escaped), builders in `JsonLd/schemas.ts`:
+    `organizationLd` on the homepage, `articleLd` on every
+    `ArticleDetailTemplate` (news), `jobPostingLd` on every job page.
+  - 10 backend + 10 frontend tests (provider selection, cross-type
+    search + publish exclusion, ranking, type filter, pagination,
+    throttle, snippet sanitisation, robots + sitemap contents; SearchPage
+    states + URL sync, JsonLd output + escaping). Backend: 229 passed, 1
+    skipped; `manage.py check` clean. Frontend `lint` / `test` (83 pass)
+    / `build` green.
+  - `docs/SEARCH.md`, `docs/SEO.md`, `docs/API_DESIGN.md` updated.

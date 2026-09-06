@@ -10,6 +10,8 @@ export type { Crumb } from "./Breadcrumbs/Breadcrumbs";
 export { Skeleton } from "./Skeleton/Skeleton";
 export { SEOHead } from "./SEOHead/SEOHead";
 export { MediaImage } from "./MediaImage/MediaImage";
+export { JsonLd } from "./JsonLd/JsonLd";
+export { organizationLd, jobPostingLd, articleLd } from "./JsonLd/schemas";
 export { RichText } from "./RichText/RichText";
 export { PageState } from "./PageState/PageState";
 export { Pagination } from "./Pagination/Pagination";

@@ -272,6 +272,23 @@ Content APIs (`services`, `portfolio`, `news`, `resources`) now return a
 resolved `image.url` (stable signed URL) in every `MediaRef`, `null`
 until the asset is scanned.
 
+## Search endpoint (Phase 11 — implemented)
+
+```
+GET /api/v1/search/?q=<text>&type=<t>&type=<t>&page=<n>     public; `search` throttle scope
+```
+Fans out across `service` / `project` / `news` / `resource` / `job`
+(each respecting its own publish rule) via
+`apps.search.providers.get_search_provider()` — Postgres FTS
+(`SearchRank` over a weighted `SearchVector`) in real environments, an
+`icontains` fallback on SQLite. `q` under 2 chars → empty results + a
+message. `data`: `{query, results: [{type, title, url, snippet, score}],
+count, page, num_pages, page_size}`; `snippet` is tag-stripped.
+
+Also served (outside `/api/v1/`): `GET /sitemap.xml` (published content +
+static routes) and `GET /robots.txt` (disallows admin + signed-file
+paths, points at the sitemap).
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

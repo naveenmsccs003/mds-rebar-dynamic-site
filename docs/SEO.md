@@ -17,11 +17,25 @@ JSON-LD injected per page type (Organization on the homepage, Article on
 blog/news posts, JobPosting on career listings, BreadcrumbList site-wide)
 using data already present on the content model — not fabricated fields.
 
+**Implemented (Phase 11):** frontend `components/JsonLd` — `<JsonLd>`
+renders a single `application/ld+json` block (angle brackets escaped);
+builders in `JsonLd/schemas.ts`. `organizationLd` on the homepage,
+`articleLd` on every `ArticleDetailTemplate` (news now), `jobPostingLd`
+on every job detail page. BreadcrumbList is a follow-up.
+
 ## Sitemap & robots
 `/sitemap.xml` generated from published content (services, portfolio,
 blogs, news, events, careers), regenerated on publish/unpublish via a
 Celery task or Django's sitemap framework. `/robots.txt` disallows admin
 and private-file paths, allows everything public.
+
+**Implemented (Phase 11):** Django's `django.contrib.sitemaps`
+(`apps.pages.sitemaps` — per-type `Sitemap` classes, published items
+only, `RequestSite` so URLs use the request host, `protocol="https"`)
+served at `/sitemap.xml`; `config.seo.robots_txt` at `/robots.txt`
+disallows `/admin/`, `/api/v1/admin/`, `/api/v1/files/`,
+`/api/v1/documents/`, `/api/schema/`, `/api/docs/` and points at the
+sitemap. Blogs/events/csr sitemaps join when those models ship.
 
 ## Rendering
 Public pages need real meta tags in the document `<head>` at response

@@ -16,6 +16,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { label: "News", to: "/news" },
   { label: "Careers", to: "/careers" },
   { label: "Contact", to: "/contact" },
+  { label: "Search", to: "/search" },
 ];
 
 export const FOOTER_NAV: { heading: string; items: NavItem[] }[] = [

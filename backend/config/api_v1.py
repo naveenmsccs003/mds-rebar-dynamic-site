@@ -21,4 +21,5 @@ urlpatterns = [
     path("", include("apps.contact.urls")),
     path("", include("apps.documents.urls")),
     path("", include("apps.media.urls")),
+    path("", include("apps.search.urls")),
 ]

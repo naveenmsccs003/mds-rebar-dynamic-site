@@ -8,15 +8,21 @@ domain app owns its own `urls.py`, included here (or from
 shape every phase.
 """
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.pages.sitemaps import SITEMAPS
+
 from . import health
+from .seo import robots_txt
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health.health, name="health"),
     path("ready/", health.ready, name="ready"),
+    path("robots.txt", robots_txt, name="robots-txt"),
+    path("sitemap.xml", sitemap, {"sitemaps": SITEMAPS}, name="sitemap"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="api-docs"),
     path("api/v1/", include("config.api_v1")),

@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 import { ApiRequestError } from "../../api/request";
 import { Breadcrumbs } from "../../components/Breadcrumbs/Breadcrumbs";
 import { Container } from "../../components/Container/Container";
+import { JsonLd } from "../../components/JsonLd/JsonLd";
+import { articleLd } from "../../components/JsonLd/schemas";
 import { PageState } from "../../components/PageState/PageState";
 import { RichText } from "../../components/RichText/RichText";
 import { SEOHead } from "../../components/SEOHead/SEOHead";
@@ -39,6 +41,16 @@ function ArticleBody({ article, basePath, feedLabel }: { article: ArticleDetail 
         title={article.seo_title || article.title}
         description={article.seo_description || article.summary || undefined}
         canonicalPath={`${basePath}/${article.slug}`}
+      />
+      <JsonLd
+        data={articleLd({
+          headline: article.title,
+          description: article.seo_description || article.summary || "",
+          datePublished: article.publish_date,
+          dateModified: article.updated_at ?? article.publish_date,
+          author: article.author_name || "",
+          url: `${typeof window !== "undefined" ? window.location.origin : ""}${basePath}/${article.slug}`,
+        })}
       />
       <Container as="header" className="page-header">
         <Breadcrumbs

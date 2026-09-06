@@ -6,6 +6,7 @@ import { JobDetailTemplate } from "../features/careers/JobDetailTemplate";
 import { ContactPage } from "../features/contact/ContactPage";
 import { HomePage } from "../features/home/HomePage";
 import { RequestQuotePage } from "../features/quote/RequestQuotePage";
+import { SearchPage } from "../features/search/SearchPage";
 import { LegalPage } from "../features/legal/LegalPage";
 import { NewsArticlePage } from "../features/news/NewsArticlePage";
 import { NewsListPage } from "../features/news/NewsListPage";
@@ -22,9 +23,9 @@ import { PlaceholderPage } from "../pages/PlaceholderPage";
  * Route table matching the public navigation in the spec (§7). Filled in
  * by phase: home/about/legal/404 (Phase 5), services (Phase 6),
  * portfolio/resources/news (Phase 7), careers (Phase 8),
- * contact/request-quote (Phase 9). The remaining routes stay
- * `PlaceholderPage` until their owning phase (blogs/events/csr →
- * 7-later, search → 11, admin/logins → later).
+ * contact/request-quote (Phase 9), search (Phase 11). The remaining
+ * routes stay `PlaceholderPage` until their owning phase
+ * (blogs/events/csr → 7-later, admin/logins → later).
  *
  * Services/Portfolio/News/Blogs/Events detail routes use a single
  * `:slug` param feeding one reusable template component each (spec §10 —
@@ -53,7 +54,7 @@ export const router = createBrowserRouter([
       { path: "careers/:slug", element: <JobDetailTemplate /> },
       { path: "contact", element: <ContactPage /> },
       { path: "request-quote", element: <RequestQuotePage /> },
-      { path: "search", element: <PlaceholderPage title="Search" /> },
+      { path: "search", element: <SearchPage /> },
       { path: "login/staff", element: <PlaceholderPage title="Staff Login" /> },
       { path: "login/knowledge-base", element: <PlaceholderPage title="Knowledge Base Login" /> },
       { path: "legal/privacy-policy", element: <LegalPage slug="privacy-policy" /> },

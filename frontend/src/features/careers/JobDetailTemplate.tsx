@@ -9,6 +9,8 @@ import { useParams } from "react-router-dom";
 import { ApiRequestError } from "../../api/request";
 import { Breadcrumbs } from "../../components/Breadcrumbs/Breadcrumbs";
 import { Container } from "../../components/Container/Container";
+import { JsonLd } from "../../components/JsonLd/JsonLd";
+import { jobPostingLd } from "../../components/JsonLd/schemas";
 import { PageState } from "../../components/PageState/PageState";
 import { SEOHead } from "../../components/SEOHead/SEOHead";
 import { Section } from "../../components/Section/Section";
@@ -53,6 +55,16 @@ function JobBody({ job }: { job: JobPostingDetail }) {
         title={job.title}
         description={`${job.title} at MDS Rebar${job.location ? ` — ${job.location}` : ""}.`}
         canonicalPath={`/careers/${job.slug}`}
+      />
+      <JsonLd
+        data={jobPostingLd({
+          title: job.title,
+          description: job.description || job.title,
+          datePosted: job.created_at,
+          validThrough: job.application_deadline,
+          employmentType: job.employment_type,
+          location: job.location,
+        })}
       />
       <Container as="header" className="page-header">
         <Breadcrumbs
