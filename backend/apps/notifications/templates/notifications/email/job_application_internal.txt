@@ -1,0 +1,9 @@
+New job application: {{ reference }}
+
+Posting: {{ job_title }} ({{ job_slug }})
+Name:    {{ name }}
+Email:   {{ email }}
+Phone:   {{ phone|default:"-" }}
+
+Open it in the admin. The résumé is available once the file scan has
+completed.

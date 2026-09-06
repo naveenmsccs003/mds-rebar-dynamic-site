@@ -1,0 +1,11 @@
+New {{ enquiry_type }} enquiry: {{ reference }}
+
+Name:    {{ name }}
+Email:   {{ email }}
+Phone:   {{ phone|default:"-" }}
+Company: {{ company|default:"-" }}
+
+Message:
+{{ message }}
+
+Open it in the admin to assign an owner.

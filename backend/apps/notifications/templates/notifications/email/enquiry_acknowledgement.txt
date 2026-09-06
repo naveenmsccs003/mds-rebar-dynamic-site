@@ -1,0 +1,8 @@
+Dear {{ name }},
+
+Thank you for contacting MDS Rebar. We have received your message and
+someone will be in touch soon.
+
+Your reference number is {{ reference }}.
+
+MDS Rebar

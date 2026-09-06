@@ -138,7 +138,13 @@ app at a time, in the order listed in `DEVELOPMENT_PHASES.md`.
   phone, company, message, status
   [NEW/ASSIGNED/IN_PROGRESS/RESPONDED/CLOSED/SPAM], assigned_to FK,
   created_at).
-- `EnquiryNote` (enquiry FK, author FK, note, created_at).
+- `EnquiryNote` (enquiry FK, author FK, note, created_at) — append-only
+  internal thread, exposed at `/admin/enquiries/{id}/notes/`.
+
+The `QuoteRequest` and `Enquiry` status machines are identical, so the
+shared transition graph + per-transition permission rule live in
+`apps.enquiries.lifecycle` (the `apps.enquiries` app has no model of its
+own — it is the home for what the two enquiry-like apps share).
 
 ### `testimonials`, `clients`, `technology`
 - Straightforward admin-editable content tables feeding the homepage
@@ -159,6 +165,12 @@ app at a time, in the order listed in `DEVELOPMENT_PHASES.md`.
   related_object, status [queued/sent/failed], attempts, last_error) — so
   a failed email is retried by Celery and never silently lost or allowed
   to crash the request that triggered it.
+- **Phase 9:** `apps.notifications.services.queue()` is the one entry
+  point (writes the QUEUED row, dispatches `notifications.
+  send_notification`); the Celery task renders
+  `templates/notifications/email/<template>.txt`, sends, and records
+  SENT / FAILED + `attempts` / `last_error`, retrying with backoff. The
+  Phase 8 job-application alert was moved onto it.
 
 ### `audit`
 - `AuditLog` (actor FK nullable [system actions], action, entity_type,

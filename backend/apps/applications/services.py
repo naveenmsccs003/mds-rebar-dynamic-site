@@ -17,12 +17,11 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.audit.services import log_action
-from apps.notifications.models import NotificationLog, NotificationStatus
+from apps.notifications import services as notifications
 
 from .models import JobApplication
 from .uploads import store_resume, validate_resume
@@ -132,20 +131,20 @@ def record_admin_change(request, application: JobApplication, before: dict, afte
 
 
 def _queue_hr_notification(application: JobApplication) -> None:
-    """Write a queued `NotificationLog` row so the "new application"
-    alert is auditable now; `apps.notifications` gains the actual sender
-    in Phase 9. Never fatal to the submission."""
-    recipient = settings.CAREERS_NOTIFICATION_EMAIL
-    if not recipient:
-        return
-    try:
-        NotificationLog.objects.create(
-            channel="email",
-            recipient=recipient,
-            template="careers.application_received",
-            related_content_type=ContentType.objects.get_for_model(JobApplication),
-            related_object_id=application.pk,
-            status=NotificationStatus.QUEUED,
-        )
-    except Exception:  # noqa: BLE001 - notification must never break intake
-        pass
+    """Alert the careers inbox that a new application arrived. Routed
+    through `apps.notifications` (Phase 9) — queued row + Celery send,
+    never fatal to the submission."""
+    notifications.queue(
+        template="job_application_internal",
+        recipient=settings.CAREERS_NOTIFICATION_EMAIL,
+        subject=f"New job application: {application.job.title}",
+        context={
+            "reference": str(application.uuid),
+            "job_title": application.job.title,
+            "job_slug": application.job.slug,
+            "name": application.name,
+            "email": application.email,
+            "phone": application.phone,
+        },
+        related_object=application,
+    )

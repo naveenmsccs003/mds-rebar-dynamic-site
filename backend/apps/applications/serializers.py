@@ -13,21 +13,12 @@ sent is read-only; only `status` and `assigned_to` can change.
 """
 from __future__ import annotations
 
-from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from apps.careers.models import JobPosting
+from apps.pages.serializers import PlainTextField as _PlainTextField
 
 from .models import JobApplication
-
-
-class _PlainTextField(serializers.CharField):
-    """A text field whose value has every tag removed on input — the
-    career form never accepts rich text, and a stored `<script>` in a
-    cover letter must not reach any future admin renderer."""
-
-    def to_internal_value(self, data):
-        return strip_tags(super().to_internal_value(data)).strip()
 
 
 class JobApplicationCreateSerializer(serializers.Serializer):

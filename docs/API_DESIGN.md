@@ -189,6 +189,47 @@ download while `resume_status` is `pending`). Submissions write an
 `application.submitted` audit row; status / assignment changes write
 `application.updated`.
 
+## Quote / Contact endpoints (Phase 9 — implemented)
+
+Public — no auth:
+```
+POST /api/v1/quote-requests/     throttle scope `quote-requests`; accepts an `Idempotency-Key`
+POST /api/v1/contact/            throttle scope `contact`
+```
+`quote-requests` body: `name`, `email`, `company?`, `phone?`,
+`country?` (ISO code), `service?` + `required_services?` (published
+service slugs), `project_type?`, `project_location?`, `project_size?`,
+`timeline?`, `message?`, hidden `website` honeypot. `contact` body:
+`enquiry_type` (`contact` | `business`), `name`, `email`, `phone?`,
+`company?`, `message`, hidden `website` honeypot. Free text is
+tag-stripped server-side. On success: `201`
+`{ "reference": "MDS-Q-YYYY-NNNNNN" | "MDS-E-YYYY-NNNNNN", "status": "new" }`
+(`{ "reference": null }` for a honeypot hit — no error to a bot). The
+reference is generated inside a transaction from a per-year counter row
+locked with `SELECT … FOR UPDATE` (never `count()+1`). A replay with a
+matching `Idempotency-Key`, or a same-email submission within 10 minutes,
+returns the original record instead of creating a duplicate. Every
+submission emails the requester an acknowledgement (with the reference)
+and, when `SALES_NOTIFICATION_EMAIL` is set, an internal alert — via
+`apps.notifications` (queued `NotificationLog` row + Celery
+`send_notification`, retried on failure, never blocking the request).
+
+Admin — session auth + `quotations.*` / `contact.*` permissions:
+```
+GET/PATCH  /api/v1/admin/quote-requests/            view/change_quoterequest; ?status= ?assigned_to=
+GET/PATCH  /api/v1/admin/enquiries/                 view/change_enquiry; ?status= ?enquiry_type= ?assigned_to=
+GET/POST   /api/v1/admin/enquiries/{id}/notes/      internal thread; POST needs change_enquiry
+```
+No admin `POST`/`DELETE` for either — records are created only through
+the public endpoints. Everything the submitter sent is read-only; only
+`status` and `assigned_to` move, through the shared lead lifecycle
+(`apps.enquiries.lifecycle`): NEW → ASSIGNED → IN_PROGRESS → RESPONDED →
+CLOSED (+ SPAM), with an illegal move returning `INVALID_TRANSITION`
+(400). Permission per transition: reassigning or → ASSIGNED needs
+`assign_<model>`; → RESPONDED needs `respond_enquiry` (quotes fall back
+to `change_quoterequest`); → CLOSED needs `close_<model>`. Every change
+writes a `quote_request.updated` / `enquiry.updated` audit row.
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

@@ -244,3 +244,49 @@
     Frontend `lint` / `test` (59 pass) / `build` green.
   - `docs/API_DESIGN.md`, `docs/DATABASE_DESIGN.md`, `docs/SECURITY.md`,
     `docs/FILE_STORAGE.md` updated.
+- Phase 9 (Quote + Contact + Enquiries): public quote / contact forms
+  with generated reference numbers, an admin workflow, and real
+  notifications.
+  - Notification sender (`apps.notifications`): `services.queue()` writes
+    a `NotificationLog` row up front then dispatches the Celery task
+    `notifications.send_notification`, which renders
+    `templates/notifications/email/<template>.txt`, sends, and records
+    `sent` / `failed` + `attempts` / `last_error`, retrying with backoff
+    (max 5). Delivery never runs in the web request and a failure never
+    propagates to the caller. Phase 8's job-application alert was moved
+    onto this path.
+  - Quote requests: public `POST /api/v1/quote-requests/` (throttle
+    `quote-requests`, `Idempotency-Key` honoured, hidden honeypot,
+    10-minute same-email dedupe). `public_reference`
+    (`MDS-Q-YYYY-NNNNNN`) is generated from the Phase 2 locked per-year
+    counter. `service` / `required_services` are published-service slugs;
+    free text is tag-stripped (`PlainTextField`, promoted to
+    `apps.pages.serializers`). Emails the requester an acknowledgement
+    with the reference + an internal alert to `SALES_NOTIFICATION_EMAIL`.
+    Admin `/api/v1/admin/quote-requests/` (list / retrieve / patch — no
+    create or delete) gated by `quotations.*`.
+  - Enquiries: public `POST /api/v1/contact/` (throttle `contact`,
+    honeypot, dedupe), `MDS-E-YYYY-NNNNNN` reference, same
+    acknowledgement + internal alert. Admin
+    `/api/v1/admin/enquiries/` + an append-only
+    `/{id}/notes/` internal thread (`EnquiryNote`).
+  - Shared lead lifecycle in `apps.enquiries.lifecycle` (the empty
+    `apps.enquiries` app now houses what quotes and enquiries share): a
+    permissive NEW→ASSIGNED→IN_PROGRESS→RESPONDED→CLOSED (+SPAM)
+    transition graph with `INVALID_TRANSITION` on an illegal move, and a
+    per-transition permission rule — reassign / →ASSIGNED needs
+    `assign_<model>`, →RESPONDED needs `respond_enquiry` (quotes fall
+    back to `change`), →CLOSED needs `close_<model>`. Every admin change
+    writes a `*.updated` audit row; every submission a `*.submitted` one.
+  - Frontend: `features/contact/ContactPage` and
+    `features/quote/RequestQuotePage` (routes `/contact`,
+    `/request-quote` wired off `PlaceholderPage`); shared
+    `features/shared/publicForm.ts` (`fieldErrorsFromApi` /
+    `formErrorFromApi`), which `ApplicationForm` was refactored onto.
+    The quote form's service list is the published catalogue via the
+    Phase 6 `useServices` hook; country selection waits for a markets
+    API (later phase — the field is optional server-side).
+  - 19 backend + 7 frontend tests. Backend: 199 passed, 1 skipped;
+    `manage.py check` clean. Frontend `lint` / `test` (66 pass) /
+    `build` green.
+  - `docs/API_DESIGN.md` + `docs/DATABASE_DESIGN.md` updated.

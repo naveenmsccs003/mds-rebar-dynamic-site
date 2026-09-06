@@ -1,0 +1,17 @@
+Dear {{ name }},
+
+Thank you for your quote request. We have received it and our team will
+review it shortly.
+
+Your reference number is {{ reference }}. Please quote it in any
+follow-up correspondence.
+
+Summary of what you sent us:
+{% if service %}- Service: {{ service }}
+{% endif %}{% if project_type %}- Project type: {{ project_type }}
+{% endif %}{% if project_location %}- Location: {{ project_location }}
+{% endif %}{% if timeline %}- Timeline: {{ timeline }}
+{% endif %}
+If any of this is wrong, reply to this email with your reference number.
+
+MDS Rebar

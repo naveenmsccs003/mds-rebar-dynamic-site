@@ -6,6 +6,7 @@ change through the `transition` action.
 """
 from __future__ import annotations
 
+from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from .models import ContentVersion, PageSection, PublishStatus, Redirect, SiteSetting, Tag
@@ -19,6 +20,16 @@ class SanitizedHTMLField(serializers.CharField):
 
     def to_internal_value(self, data):
         return sanitize_html(super().to_internal_value(data))
+
+
+class PlainTextField(serializers.CharField):
+    """A text field that accepts no markup at all — every tag is stripped
+    on input. For public free-text that is only ever rendered as plain
+    text (career cover letters, quote / contact messages); a stored
+    ``<script>`` must never reach a future admin renderer."""
+
+    def to_internal_value(self, data):
+        return strip_tags(super().to_internal_value(data)).strip()
 
 
 class MediaRefSerializer(serializers.Serializer):

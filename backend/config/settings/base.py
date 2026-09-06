@@ -223,10 +223,12 @@ RESUME_UPLOAD_MAX_BYTES = env.int("RESUME_UPLOAD_MAX_BYTES", default=5 * 1024 * 
 RESUME_UPLOAD_ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"]
 RESUME_UPLOAD_STORAGE_PREFIX = env("RESUME_UPLOAD_STORAGE_PREFIX", default="private/resumes")
 
-# Where "new job application" notifications go. Empty in base/dev — the
-# actual send pipeline is Phase 9 (apps.notifications); until then a
-# queued NotificationLog row is written so the intent is auditable.
+# Internal inbox addresses for public-form alerts (apps.notifications).
+# Empty in base/dev — no address means no internal alert is queued; the
+# applicant / requester acknowledgement email still goes out. Set per
+# environment.
 CAREERS_NOTIFICATION_EMAIL = env("CAREERS_NOTIFICATION_EMAIL", default="")
+SALES_NOTIFICATION_EMAIL = env("SALES_NOTIFICATION_EMAIL", default="")
 
 # --- REST framework ---------------------------------------------------------
 REST_FRAMEWORK = {

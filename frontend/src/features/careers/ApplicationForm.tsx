@@ -7,16 +7,14 @@
  */
 import { useId, useState } from "react";
 
-import { ApiRequestError } from "../../api/request";
 import { Button } from "../../components/Button/Button";
+import { type FieldErrors, fieldErrorsFromApi, formErrorFromApi } from "../shared/publicForm";
 
 import { useApplicationSubmit } from "./hooks";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(",");
 const MAX_BYTES = 5 * 1024 * 1024;
-
-type FieldErrors = Record<string, string>;
 
 function validate(form: { name: string; email: string; resume: File | null }): FieldErrors {
   const errors: FieldErrors = {};
@@ -73,16 +71,8 @@ export function ApplicationForm({ jobSlug, disabled }: { jobSlug: string; disabl
     mutation.mutate({ job: jobSlug, name, email, phone, cover_letter: coverLetter, resume });
   }
 
-  const serverErrors: FieldErrors =
-    mutation.error instanceof ApiRequestError
-      ? Object.fromEntries(
-          Object.entries(mutation.error.fields).map(([k, v]) => [k, v.join(" ")]),
-        )
-      : {};
-  const formError =
-    mutation.error instanceof ApiRequestError && Object.keys(mutation.error.fields).length === 0
-      ? mutation.error.message
-      : undefined;
+  const serverErrors: FieldErrors = fieldErrorsFromApi(mutation.error);
+  const formError = formErrorFromApi(mutation.error);
   const err = (field: string) => errors[field] ?? serverErrors[field];
 
   return (

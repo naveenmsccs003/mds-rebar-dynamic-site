@@ -1,0 +1,15 @@
+New quote request: {{ reference }}
+
+Name:     {{ name }}
+Company:  {{ company|default:"-" }}
+Email:    {{ email }}
+Phone:    {{ phone|default:"-" }}
+Country:  {{ country|default:"-" }}
+Service:  {{ service|default:"-" }}
+Project:  {{ project_type|default:"-" }} / {{ project_location|default:"-" }} / {{ project_size|default:"-" }}
+Timeline: {{ timeline|default:"-" }}
+
+Message:
+{{ message|default:"(none)" }}
+
+Open it in the admin to assign an owner.
