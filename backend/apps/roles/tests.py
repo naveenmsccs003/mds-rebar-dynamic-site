@@ -118,3 +118,47 @@ def test_sync_roles_revokes_permissions_dropped_from_the_map():
     Group.objects.get(name="Auditor").permissions.add(stray)
     _sync()
     assert _codenames("Auditor") == {"audit.view_auditlog"}
+
+
+# --- Admin SPA A1: read-only role admin API -------------------------
+
+from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+
+User = get_user_model()
+API_URL = "/api/v1/admin/roles/"
+
+
+@pytest.fixture
+def api():
+    return APIClient()
+
+
+@pytest.mark.django_db
+def test_role_list_requires_view_group_permission(api):
+    assert api.get(API_URL).status_code == 401
+    user = User.objects.create_user(email="u@mds.example", password="x")
+    api.force_login(user)
+    assert api.get(API_URL).status_code == 403
+    user.user_permissions.add(Permission.objects.get(codename="view_group"))
+    api.force_login(User.objects.get(pk=user.pk))
+    assert api.get(API_URL).status_code == 200
+
+
+@pytest.mark.django_db
+def test_role_payload_shape(api):
+    api.force_login(User.objects.create_superuser(email="su@mds.example", password="x"))
+    hr = Group.objects.get(name="HR")
+    hr.permissions.add(*Permission.objects.filter(codename="view_jobposting"))
+    User.objects.create_user(email="hr1@mds.example", password="x").groups.add(hr)
+
+    rows = {r["name"]: r for r in api.get(API_URL).json()["data"]["results"]}
+    assert "HR" in rows
+    assert rows["HR"]["user_count"] == 1
+    assert any(p.endswith("view_jobposting") for p in rows["HR"]["permissions"])
+
+
+@pytest.mark.django_db
+def test_roles_are_read_only(api):
+    api.force_login(User.objects.create_superuser(email="su@mds.example", password="x"))
+    assert api.post(API_URL, {"name": "Nope"}, format="json").status_code == 405

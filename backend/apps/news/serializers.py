@@ -12,6 +12,7 @@ from apps.pages.serializers import (
     MediaRefSerializer,
     NamedSlugRefSerializer,
     SanitizedHTMLField,
+    WorkflowStatusMixin,
 )
 
 from .models import News
@@ -45,7 +46,7 @@ class NewsDetailSerializer(NewsListSerializer):
         return obj.author.get_full_name() if obj.author_id else ""
 
 
-class NewsAdminSerializer(serializers.ModelSerializer):
+class NewsAdminSerializer(WorkflowStatusMixin, serializers.ModelSerializer):
     content = SanitizedHTMLField(required=False, allow_blank=True)
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all(), required=False
@@ -57,12 +58,12 @@ class NewsAdminSerializer(serializers.ModelSerializer):
         fields = [
             "id", "title", "slug", "summary", "content", "category",
             "featured_image", "tags", "author", "author_name",
-            "publish_date", "scheduled_publish_at", "status",
+            "publish_date", "scheduled_publish_at", "status", "allowed_transitions",
             "seo_title", "seo_description", "seo_keywords",
             "og_title", "og_description", "og_image", "canonical_url",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["status", "author", "created_at", "updated_at"]
+        read_only_fields = ["allowed_transitions", "status", "author", "created_at", "updated_at"]
 
     def get_author_name(self, obj) -> str:
         return obj.author.get_full_name() if obj.author_id else ""

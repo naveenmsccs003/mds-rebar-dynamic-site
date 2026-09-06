@@ -6,6 +6,7 @@ import { PublicLayout } from "../layouts/PublicLayout";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 
+import { adminRoute } from "./adminRouter";
 import { lazyRoute as route } from "./lazyRoute";
 
 /**
@@ -55,8 +56,5 @@ export const router = createBrowserRouter([
       { path: "*", element: <NotFoundPage /> },
     ],
   },
-  {
-    path: "/admin",
-    element: <PlaceholderPage title="Admin Panel" />,
-  },
+  adminRoute,
 ]);

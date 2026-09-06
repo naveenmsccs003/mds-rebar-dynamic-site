@@ -539,3 +539,27 @@
   - +14 backend tests → 264 passed, 1 skipped; `ruff` / `bandit` clean.
   - `docs/CURRENT_STATE.md`, `docs/BACKUP_DISASTER_RECOVERY.md`,
     `docs/ACCEPTANCE.md` (new), `docs/CHANGELOG.md` updated.
+
+## Admin SPA (post-plan) — staff/admin React app on the existing API
+
+- **A1 — API gaps + admin shell + auth.**
+  - Backend: `UserAdminViewSet` (`/api/v1/admin/users/` — list/retrieve/
+    create/patch, **no hard delete**; create without a password emails a
+    set-password link; role assignment by group name; every change
+    audited), `RoleViewSet` (`/api/v1/admin/roles/` — read-only groups +
+    resolved permission codenames + user count), `AuditLogViewSet`
+    (`/api/v1/admin/audit/` — read-only, `IsAuditReader`, cursor
+    pagination, `action`/`entity_type`/`actor` filters). A read-only
+    `allowed_transitions` field added to the workflow admin serializers
+    (services/portfolio/news/pages) so the UI's WorkflowBar isn't
+    hardcoded. +14 backend tests → 270 passed, 1 skipped.
+  - Frontend (`/admin` route tree in the existing app, all chunks lazy):
+    `features/auth/` — `useSession` (401 → null), `useLogin`/`useLogout`/
+    `usePasswordChange`, `usePermission`/`usePermissionChecker`,
+    `<RequireAuth>` (bounce to `/admin/login?next=`), `<RequirePermission>`,
+    `LoginPage`, `PasswordChangePage`. `AdminLayout` with a sidebar
+    gated per-item by permission (`layouts/adminNav.ts`). `DashboardPage`
+    — "needs attention" counts, each shown only if the role can see that
+    queue. +8 frontend tests (MSW) → 99; +3 Playwright admin journeys
+    (anon→login, sign-in→dashboard→permission-filtered sidebar→sign-out,
+    stale deep link). `lint` / `build` green.

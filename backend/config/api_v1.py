@@ -22,4 +22,7 @@ urlpatterns = [
     path("", include("apps.documents.urls")),
     path("", include("apps.media.urls")),
     path("", include("apps.search.urls")),
+    path("", include("apps.users.urls")),
+    path("", include("apps.roles.urls")),
+    path("", include("apps.audit.urls")),
 ]

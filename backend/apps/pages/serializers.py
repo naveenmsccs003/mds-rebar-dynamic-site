@@ -62,13 +62,27 @@ class NamedSlugRefSerializer(serializers.Serializer):
     slug = serializers.SlugField()
 
 
+class WorkflowStatusMixin(serializers.Serializer):
+    """Adds a read-only `allowed_transitions` to any admin serializer for
+    a model with a `status` — the admin UI's `WorkflowBar` renders one
+    button per entry instead of hardcoding the graph
+    (`apps.pages.workflow`)."""
+
+    allowed_transitions = serializers.SerializerMethodField()
+
+    def get_allowed_transitions(self, obj) -> list[str]:
+        from .workflow import allowed_targets
+
+        return sorted(allowed_targets(getattr(obj, "status", "") or ""))
+
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ["id", "name", "slug"]
 
 
-class PageSectionSerializer(serializers.ModelSerializer):
+class PageSectionSerializer(WorkflowStatusMixin, serializers.ModelSerializer):
     updated_by_email = serializers.EmailField(source="updated_by.email", read_only=True)
 
     class Meta:
@@ -80,6 +94,7 @@ class PageSectionSerializer(serializers.ModelSerializer):
             "display_order",
             "content",
             "status",
+            "allowed_transitions",
             "published_at",
             "scheduled_publish_at",
             "current_version",

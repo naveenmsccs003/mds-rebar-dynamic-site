@@ -15,6 +15,7 @@ from apps.pages.serializers import (
     MediaRefSerializer,
     NamedSlugRefSerializer,
     SanitizedHTMLField,
+    WorkflowStatusMixin,
 )
 
 from .models import Project, ProjectDocument, ProjectImage
@@ -82,7 +83,7 @@ class ProjectDetailSerializer(_ProjectBase):
         return ProjectDocumentSerializer(public, many=True).data
 
 
-class ProjectAdminSerializer(serializers.ModelSerializer):
+class ProjectAdminSerializer(WorkflowStatusMixin, serializers.ModelSerializer):
     description = SanitizedHTMLField(required=False, allow_blank=True)
     images = ProjectImageWriteSerializer(many=True, required=False)
 
@@ -91,10 +92,10 @@ class ProjectAdminSerializer(serializers.ModelSerializer):
         fields = [
             "id", "title", "slug", "category", "description", "completion_year", "is_featured",
             "country", "client_industry", "services", "technology", "images",
-            "status", "seo_title", "seo_description", "og_image",
+            "status", "allowed_transitions", "seo_title", "seo_description", "og_image",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["status", "created_at", "updated_at"]
+        read_only_fields = ["allowed_transitions", "status", "created_at", "updated_at"]
 
     def _write_images(self, project: Project, rows: list[dict]) -> None:
         project.images.all().delete()

@@ -16,6 +16,7 @@ from apps.pages.serializers import (
     MediaRefSerializer,
     NamedSlugRefSerializer,
     SanitizedHTMLField,
+    WorkflowStatusMixin,
 )
 
 from .models import Service, ServiceCapability, ServiceFAQ, ServiceProcessStep
@@ -78,7 +79,7 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
         ]
 
 
-class ServiceAdminSerializer(serializers.ModelSerializer):
+class ServiceAdminSerializer(WorkflowStatusMixin, serializers.ModelSerializer):
     long_description = SanitizedHTMLField(required=False, allow_blank=True)
     capabilities = ServiceCapabilitySerializer(many=True, required=False)
     process_steps = ServiceProcessStepSerializer(many=True, required=False)
@@ -97,11 +98,11 @@ class ServiceAdminSerializer(serializers.ModelSerializer):
             "hero_image", "icon", "og_image",
             "business_value", "standards_codes", "deliverables", "output_formats",
             "technology", "capabilities", "process_steps", "faqs",
-            "display_order", "status",
+            "display_order", "status", "allowed_transitions",
             "seo_title", "seo_description", "seo_keywords",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["status", "created_at", "updated_at"]
+        read_only_fields = ["allowed_transitions", "status", "created_at", "updated_at"]
 
     def _write_children(self, service: Service, children: dict) -> None:
         for field, rows in children.items():
