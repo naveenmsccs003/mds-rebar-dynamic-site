@@ -123,6 +123,31 @@ left untouched. Workflow + versioning are the shared
 `apps.pages.api_mixins` behaviour, reused by every content admin viewset
 from here on.
 
+## Portfolio / Resources / News endpoints (Phase 7 — implemented)
+All list endpoints are paginated + server-filtered — the full table
+never reaches the browser.
+
+Public — no auth:
+```
+GET  /api/v1/portfolio/            PUBLISHED projects; ?country=<code> ?service=<slug> ?industry=<slug> ?year= ?featured= ?q=
+GET  /api/v1/portfolio/{slug}/     + description, images, services, technology, public documents
+GET  /api/v1/resources/            published resources; ?category= ?access_type= ?q=
+GET  /api/v1/resources/{slug}/     restricted resources show metadata only (signed file URL is Phase 10)
+GET  /api/v1/news/                 PUBLISHED, newest first; ?category= ?tag=<slug> ?year= ?q=
+GET  /api/v1/news/{slug}/          + content (HTML), author name, OG/SEO
+```
+Admin — session auth + `<app>.*_<model>` permissions
+(`portfolio.*_project`, `resources.*_resource`, `news.*_news`):
+```
+/api/v1/admin/portfolio/          CRUD + transition/ + versions/ + versions/{id}/rollback/   (workflow: publish_project)
+/api/v1/admin/resources/          CRUD only — Resource uses a plain `is_published` boolean, no DRAFT/REVIEW workflow
+/api/v1/admin/news/               CRUD + transition/ + versions/ + versions/{id}/rollback/   (workflow: publish_news)
+```
+`status` is read-only on the workflow serializers; `description` /
+`content` are HTML-sanitised on write; Project's `images` list is
+replace-all; News `author` is set from the request user on create and
+`tags` are assigned by id. Portfolio/News reuse `apps.pages.api_mixins`.
+
 ## Example endpoints (illustrative, finalized per app in Phase 6–10)
 ```
 GET    /api/v1/services/                    (public, paginated, filterable)

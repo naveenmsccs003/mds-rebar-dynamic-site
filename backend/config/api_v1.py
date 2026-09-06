@@ -12,4 +12,7 @@ urlpatterns = [
     path("auth/", include("apps.accounts.urls")),
     path("", include("apps.pages.urls")),
     path("", include("apps.services.urls")),
+    path("", include("apps.portfolio.urls")),
+    path("", include("apps.resources.urls")),
+    path("", include("apps.news.urls")),
 ]

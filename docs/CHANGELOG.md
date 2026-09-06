@@ -157,3 +157,36 @@
   - `api/request.ts` `apiGet` param type loosened to `object`.
   - Backend suite: 137 passed, 1 skipped. Frontend: `lint` / `test`
     (33 pass) / `build` green. `docs/API_DESIGN.md` updated.
+- Phase 7 (Portfolio + Resources + News): three public catalogues +
+  admin CRUD, all list endpoints paginated + server-filtered.
+  - Portfolio: public `GET /api/v1/portfolio/` (`?country` `?service`
+    `?industry` `?year` `?featured` `?q`) + `/{slug}/`; admin
+    `/api/v1/admin/portfolio/` CRUD + workflow (reuses
+    `apps.pages.api_mixins`; `publish_project`). `description`
+    HTML-sanitised; `images` replace-all.
+  - Resources: public `GET /api/v1/resources/` (`?category`
+    `?access_type` `?q`) + `/{slug}/`; admin CRUD. Deliberately a plain
+    `is_published` boolean — resources are a file catalogue, not
+    editorial prose, so no DRAFT/REVIEW workflow or version history.
+    Restricted resources expose metadata only (signed file URL is
+    Phase 10).
+  - News: public `GET /api/v1/news/` (newest first; `?category` `?tag`
+    `?year` `?q`) + `/{slug}/`; admin CRUD + workflow (`publish_news`).
+    `content` HTML-sanitised; `author` set from the request user on
+    create; `tags` assigned by id. News extends `PublishableContent`, so
+    Blogs / Events / CSR get the same serializer shape later.
+  - Shared reusable serializers `MediaRefSerializer` /
+    `NamedSlugRefSerializer` promoted to `apps.pages.serializers`
+    (services updated to use them).
+  - Frontend: `PortfolioListTemplate` (FilterBar + Pagination, filters +
+    page in the URL via `useListParams`) + `PortfolioDetailTemplate`;
+    `ResourceListTemplate`; shared `ArticleListTemplate` /
+    `ArticleDetailTemplate` (reusable for Blogs / Events / CSR) wired up
+    by `NewsListPage` / `NewsArticlePage`. New shared components
+    `Pagination`, `FilterBar`. Routes `/portfolio`, `/portfolio/:slug`,
+    `/resources`, `/news`, `/news/:slug` wired in.
+  - 19 backend + 20 frontend tests. Backend: 154 passed, 1 skipped.
+    Frontend `lint` / `test` / `build` green. Also fixed a latent
+    unused import in a Phase 6 test file (masked by tsc's incremental
+    cache; a fresh checkout / CI build would have failed on it).
+  - `docs/API_DESIGN.md` + `docs/UI_DESIGN_SYSTEM.md` updated.

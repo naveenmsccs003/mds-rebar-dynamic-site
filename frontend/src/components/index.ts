@@ -11,3 +11,6 @@ export { Skeleton } from "./Skeleton/Skeleton";
 export { SEOHead } from "./SEOHead/SEOHead";
 export { RichText } from "./RichText/RichText";
 export { PageState } from "./PageState/PageState";
+export { Pagination } from "./Pagination/Pagination";
+export { FilterBar } from "./FilterBar/FilterBar";
+export type { Filter } from "./FilterBar/FilterBar";

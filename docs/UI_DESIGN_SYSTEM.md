@@ -43,7 +43,7 @@ Every component: keyboard operable, visible focus ring, correct ARIA
 role/label, sufficient color contrast (WCAG 2.2 AA), and documented
 loading/empty/error states where it renders remote data.
 
-### Implemented so far (Phase 5–6)
+### Implemented so far (Phase 5–7)
 `Button`, `LoadingState`, `EmptyState`, `ErrorState` (Phase 1) plus
 `Container` (max-width + gutters), `Section` (full-bleed band with
 `tone="default|muted|dark"`), `Card`, `Breadcrumbs`, `Skeleton`,
@@ -63,7 +63,16 @@ sections from the CMS without a frontend deploy.
 `ServiceDetailTemplate` from its DB record (breadcrumb → hero → overview
 → capabilities → process → business value → technology → standards →
 deliverables → output formats → FAQs → quote CTA; each section
-conditional on data). Remaining components (forms, Table, Modal, Tabs,
+conditional on data).
+
+Phase 7 adds `Pagination` + `FilterBar` components and the
+server-filtered/paginated list templates: `PortfolioListTemplate` /
+`PortfolioDetailTemplate`, `ResourceListTemplate`, and the shared
+`ArticleListTemplate` / `ArticleDetailTemplate` (used by News now; Blogs
+/ Events / CSR feed the same components in their phase). Filters + page
+live in the URL query string (`features/shared/useListParams`).
+
+Remaining components (forms, Table, Modal, Tabs,
 FileUpload, admin `ListPageTemplate`, …) land with the features that
 first need them (Phases 7–12).
 

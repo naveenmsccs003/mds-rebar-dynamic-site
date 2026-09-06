@@ -9,6 +9,9 @@ import { AxiosError } from "axios";
 import { apiClient } from "./client";
 import type { ApiError, ApiResponse } from "./envelope";
 
+/** Mirrors the backend's `REST_FRAMEWORK["PAGE_SIZE"]` (docs/API_DESIGN.md). */
+export const PAGE_SIZE = 20;
+
 export class ApiRequestError extends Error {
   readonly code: string;
   readonly fields: Record<string, string[]>;

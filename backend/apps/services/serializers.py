@@ -12,27 +12,15 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.pages.serializers import SanitizedHTMLField
+from apps.pages.serializers import (
+    MediaRefSerializer,
+    NamedSlugRefSerializer,
+    SanitizedHTMLField,
+)
 
 from .models import Service, ServiceCapability, ServiceFAQ, ServiceProcessStep
 
-
-class MediaRefSerializer(serializers.Serializer):
-    """Lightweight image reference. The resolved file URL arrives with the
-    object-storage layer (Phase 10); until then the frontend renders from
-    `alt_text` / dimensions and treats a missing URL gracefully."""
-
-    id = serializers.IntegerField()
-    alt_text = serializers.CharField()
-    caption = serializers.CharField()
-    width = serializers.IntegerField(allow_null=True)
-    height = serializers.IntegerField(allow_null=True)
-
-
-class TechnologyRefSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
-    slug = serializers.SlugField()
+TechnologyRefSerializer = NamedSlugRefSerializer
 
 
 class ServiceCapabilitySerializer(serializers.ModelSerializer):
