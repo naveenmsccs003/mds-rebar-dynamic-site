@@ -1,9 +1,12 @@
 /**
  * Slide-over panel for admin create/edit forms. Closes on Escape and on
- * a backdrop click; moves focus into the panel on open and restores it
- * on close (docs/UI_DESIGN_SYSTEM.md accessibility).
+ * a backdrop click; focus moves into the panel, stays trapped there, and
+ * is restored on close (`useDialogFocus`, docs/UI_DESIGN_SYSTEM.md
+ * accessibility).
  */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+
+import { useDialogFocus } from "./useDialogFocus";
 
 export interface FormDrawerProps {
   open: boolean;
@@ -16,27 +19,12 @@ export interface FormDrawerProps {
 
 export function FormDrawer({ open, title, onClose, children, footer }: FormDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const restoreRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    restoreRef.current = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus();
-
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      restoreRef.current?.focus();
-    };
-  }, [open, onClose]);
+  const onKeyDown = useDialogFocus(panelRef, open, onClose);
 
   if (!open) return null;
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="drawer" role="dialog" aria-modal="true" aria-label={title} onKeyDown={onKeyDown}>
       <div className="drawer__backdrop" onClick={onClose} />
       <div className="drawer__panel" ref={panelRef} tabIndex={-1}>
         <div className="drawer__head">

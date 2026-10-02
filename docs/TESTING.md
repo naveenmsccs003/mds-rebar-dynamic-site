@@ -71,6 +71,30 @@ Public journeys run with the API stubbed per test via `page.route`
 (`e2e/support.ts`), so they need no backend and run in CI (the `e2e`
 job): home nav, global search (URL state + result link), contact form
 (validation → success + reference), careers list → detail → application
-form validation. The admin-side journeys in the list above (login, RBAC
-via UI + direct API, publishing, user / permission management, audit
-visibility) are added when the admin SPA ships.
+form validation.
+
+## Implemented (Admin SPA, A1–A7)
+
+**Admin E2E** — `frontend/e2e/admin-journeys.spec.ts`, 15 journeys, same
+`page.route` stubbing, same CI `e2e` job. Mapped to the critical-journey
+list above:
+
+| Journey | Covered by |
+| --- | --- |
+| Login | anonymous `/admin` → login; sign in → dashboard → sign out; stale deep link after logout → `login?next=` |
+| RBAC (UI) | sidebar shows only permitted sections; a forbidden route renders "Not permitted" (auditor on `/admin/users`, content editor on `/admin/applications`); a BD user can't close a quote (Save disabled, missing codename named); a move the server refuses with 403 shows the API's message |
+| RBAC (direct API) | backend tests: every admin viewset asserts 401 anonymous / 403 without the codename (e.g. `apps/users/tests.py::test_requires_auth_then_permission`) |
+| Publishing workflow | CMS section → review + version history; service create → publish |
+| Quote / enquiry handling | assign an enquiry + internal note; quote lifecycle gating (above) |
+| File upload | media library upload: declare → PUT to ticket → complete → `MediaAsset` (shown as scanning); pick a library image for a service hero |
+| Private file access | HR's résumé link refused (409) while the scan is pending, signed URL once clean; roles without the HR permission can't reach applications |
+| User management | admin deactivates a user (confirm → `is_active: false`) |
+| Permission management | admin reads a role's permissions, then creates a user with that role (no password → set-password email notice) |
+| Audit log visibility | auditor reads entries + before/after diff, has no write controls |
+| Keyboard operation | open a row with Enter, Tab stays inside the drawer, Escape returns focus to the row |
+
+**Admin unit tests** — vitest + MSW per admin feature
+(`features/admin-*/*.test.tsx`, `features/auth/auth.test.tsx`) plus the
+primitives (`components/admin/adminPrimitives.test.tsx`: table states +
+keyboard, workflow gating, drawer focus trap / restore, nested-dialog
+Escape). Frontend total: 138 vitest. See `docs/ADMIN_UI.md`.

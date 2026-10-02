@@ -73,7 +73,10 @@ export function MediaPickerDialog({ open, onClose, onSelect }: Props) {
         {query.isError ? (
           <ErrorState onRetry={() => query.refetch()} />
         ) : query.isPending || !query.data ? (
-          <Skeleton lines={6} />
+          <div role="status" aria-live="polite">
+            <span className="sr-only">Loading…</span>
+            <Skeleton lines={6} />
+          </div>
         ) : query.data.results.length === 0 ? (
           <p className="admin-muted">No images match.</p>
         ) : (

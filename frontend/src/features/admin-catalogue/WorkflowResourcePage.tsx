@@ -80,6 +80,8 @@ export function WorkflowResourcePage<TRow extends WorkflowRow>({
   const { page, setPage, filterParams } = useListParams();
   const query = hooks.useList(page > 1 ? { ...filterParams, page: String(page) } : filterParams);
   const canAdd = usePermission(`${app}.add_${model}`);
+  const changePerm = `${app}.change_${model}`;
+  const canChange = usePermission(changePerm);
   const can = usePermissionChecker();
 
   const [editing, setEditing] = useState<TRow | null | undefined>(undefined);
@@ -140,10 +142,13 @@ export function WorkflowResourcePage<TRow extends WorkflowRow>({
                   {formErr}
                 </p>
               )}
-              {renderFields(values, set, fieldErr)}
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving…" : editing ? "Save changes" : "Create"}
-              </Button>
+              <fieldset className="form__fieldset" disabled={Boolean(editing) && !canChange}>
+                {renderFields(values, set, fieldErr)}
+                {editing && !canChange && <p className="admin-muted">Read-only: requires {changePerm}.</p>}
+                <Button type="submit" disabled={mutation.isPending}>
+                  {mutation.isPending ? "Saving…" : editing ? "Save changes" : "Create"}
+                </Button>
+              </fieldset>
             </form>
 
             {editing && (

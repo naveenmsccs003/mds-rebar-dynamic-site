@@ -134,7 +134,10 @@ export function MediaLibraryPage() {
           onRetry={() => query.refetch()}
         />
       ) : query.isPending || !query.data ? (
-        <Skeleton lines={8} />
+        <div role="status" aria-live="polite">
+          <span className="sr-only">Loading…</span>
+          <Skeleton lines={8} />
+        </div>
       ) : query.data.results.length === 0 ? (
         <p className="admin-muted">No images yet.</p>
       ) : (

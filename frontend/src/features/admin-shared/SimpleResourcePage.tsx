@@ -16,6 +16,8 @@ import { usePermission } from "../auth/usePermission";
 interface Props<T extends { id: number }> {
   title: string;
   addPermission: string;
+  /** Needed to save an edit; defaults to `addPermission` with add_ → change_. */
+  changePermission?: string;
   useList: (params: Record<string, string>) => {
     data: Paginated<T> | undefined;
     isPending: boolean;
@@ -32,6 +34,7 @@ interface Props<T extends { id: number }> {
 export function SimpleResourcePage<T extends { id: number }>({
   title,
   addPermission,
+  changePermission = addPermission.replace(".add_", ".change_"),
   useList,
   columns,
   renderForm,
@@ -40,6 +43,7 @@ export function SimpleResourcePage<T extends { id: number }>({
   const { page, setPage, filterParams } = useListParams();
   const query = useList(page > 1 ? { ...filterParams, page: String(page) } : filterParams);
   const canAdd = usePermission(addPermission);
+  const canChange = usePermission(changePermission);
   const [editing, setEditing] = useState<T | null | undefined>(undefined);
 
   return (
@@ -66,7 +70,14 @@ export function SimpleResourcePage<T extends { id: number }>({
         title={editing ? `Edit` : newLabel}
         onClose={() => setEditing(undefined)}
       >
-        {editing !== undefined && renderForm(editing, () => setEditing(undefined))}
+        {editing !== undefined && (
+          <fieldset className="form__fieldset" disabled={editing !== null && !canChange}>
+            {editing !== null && !canChange && (
+              <p className="admin-muted">Read-only: requires {changePermission}.</p>
+            )}
+            {renderForm(editing, () => setEditing(undefined))}
+          </fieldset>
+        )}
       </FormDrawer>
     </>
   );

@@ -430,3 +430,267 @@ test("audit: an auditor reads the log but gets no write controls", async ({ page
   await expect(page.getByRole("heading", { name: "Not permitted" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Users" })).toHaveCount(0);
 });
+
+// --- A7: remaining TESTING.md journeys + keyboard operation -------------
+
+test("RBAC: a BD user can't close a quote, and a move the server refuses shows its error", async ({ page }) => {
+  const bd = {
+    ...EDITOR,
+    roles: ["BusinessDevelopment"],
+    permissions: ["quotations.view_quoterequest", "quotations.change_quoterequest", "quotations.assign_quoterequest"],
+  };
+  const quote = {
+    id: 1,
+    public_reference: "MDS-Q-2026-000001",
+    name: "Jane Doe",
+    email: "jane@example.com",
+    phone: "",
+    company: "ACME",
+    country_code: "ae",
+    service_slug: "rebar-detailing",
+    required_service_slugs: [],
+    project_type: "",
+    project_location: "",
+    project_size: "",
+    timeline: "",
+    message: "We need 40t of rebar detailed.",
+    status: "assigned",
+    allowed_transitions: ["in_progress", "closed", "spam"],
+    assigned_to: 1,
+    assigned_to_email: "ed@mds.example",
+    ip_address: null,
+    user_agent: "",
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+  };
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(bd),
+    "GET /api/v1/admin/quote-requests": ok(paginated([quote])),
+    "GET /api/v1/admin/quote-requests/1": ok(quote),
+    "PATCH /api/v1/admin/quote-requests/1": (route) =>
+      route.fulfill({ status: 403, json: err("PERMISSION_DENIED", "You do not have permission to perform this action.") }),
+  });
+
+  await page.goto("/admin/quote-requests");
+  await page.getByText("MDS-Q-2026-000001").click();
+  const drawer = page.getByRole("dialog", { name: "MDS-Q-2026-000001" });
+  const status = drawer.getByRole("combobox", { name: "Status" });
+  const save = drawer.getByRole("button", { name: "Save" });
+
+  // UI gate: closing needs quotations.close_quoterequest -> Save disabled, reason shown.
+  await status.selectOption("closed");
+  await expect(drawer.getByRole("alert")).toContainText("quotations.close_quoterequest");
+  await expect(save).toBeDisabled();
+
+  // Server gate: an allowed-looking move the API refuses surfaces the 403 message.
+  await status.selectOption("in_progress");
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(drawer.getByRole("alert")).toContainText("You do not have permission");
+  await expect(drawer).toBeVisible();
+});
+
+test("file upload: upload an image to the media library (declare → PUT → complete → asset)", async ({ page }) => {
+  const manager = { ...EDITOR, roles: ["ResourceManager"], permissions: ["media.view_mediaasset", "media.add_mediaasset", "media.change_mediaasset"] };
+  const assets: Array<Record<string, unknown>> = [];
+  const calls: string[] = [];
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(manager),
+    "GET /api/v1/admin/media": (route) => route.fulfill({ json: ok(paginated(assets)) }),
+    "POST /api/v1/admin/documents/upload": (route) => {
+      calls.push("declare");
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      expect(body).toMatchObject({ category: "image", filename: "rebar.png", visibility: "public" });
+      return route.fulfill({
+        status: 201,
+        json: ok({
+          document: "doc-uuid",
+          upload: { url: "http://localhost:8000/api/v1/uploads/tok", method: "PUT", headers: {}, expires_in: 600 },
+        }),
+      });
+    },
+    "PUT /api/v1/uploads/tok": (route) => {
+      calls.push("put");
+      return route.fulfill({ status: 204, body: "" });
+    },
+    "POST /api/v1/admin/documents/doc-uuid/complete": (route) => {
+      calls.push("complete");
+      return route.fulfill({
+        json: ok({ id: 42, uuid: "doc-uuid", original_filename: "rebar.png", content_type: "image/png", size_bytes: 68, visibility: "public", status: "pending" }),
+      });
+    },
+    "POST /api/v1/admin/media": (route) => {
+      calls.push("asset");
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      const row = { id: 9, document: body.document, document_status: "pending", url: null, alt_text: body.alt_text, caption: "", width: null, height: null, created_at: "2026-09-02T00:00:00Z" };
+      assets.push(row);
+      return route.fulfill({ status: 201, json: ok(row) });
+    },
+  });
+
+  await page.goto("/admin/media");
+  await expect(page.getByText("No images yet.")).toBeVisible();
+  await page.getByRole("button", { name: "Upload image" }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Upload image" });
+  await drawer.getByLabel("Image file").setInputFiles({
+    name: "rebar.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489", "hex"),
+  });
+  await drawer.getByLabel("Alt text").fill("Rebar cage on site");
+  await drawer.getByRole("button", { name: "Upload image" }).click();
+
+  await expect(drawer).toBeHidden();
+  expect(calls).toEqual(["declare", "put", "complete", "asset"]);
+  // Newly uploaded files show as pending until the virus scan clears them.
+  await expect(page.getByRole("button", { name: /Rebar cage on site/ })).toContainText("scanning…");
+});
+
+test("private files: HR gets a signed résumé link only once the scan is clean", async ({ page }) => {
+  const hr = {
+    ...EDITOR,
+    roles: ["HR"],
+    permissions: ["applications.view_jobapplication", "applications.change_jobapplication"],
+  };
+  const application = {
+    id: 3,
+    uuid: "u-3",
+    job: 2,
+    job_title: "Rebar Detailer",
+    job_slug: "rebar-detailer",
+    name: "Pat Applicant",
+    email: "pat@example.com",
+    phone: "",
+    cover_letter: "Keen to join.",
+    additional_info: "",
+    resume: 99,
+    resume_filename: "pat-cv.pdf",
+    resume_status: "pending",
+    status: "new",
+    assigned_to: null,
+    assigned_to_email: "",
+    ip_address: null,
+    user_agent: "",
+    created_at: "2026-09-01T00:00:00Z",
+  };
+  let scanned = false;
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(hr),
+    "GET /api/v1/admin/career-applications": ok(paginated([application])),
+    "GET /api/v1/admin/career-applications/3": ok(application),
+    "GET /api/v1/admin/career-applications/3/resume": (route) =>
+      scanned
+        ? route.fulfill({ json: ok({ url: "https://files.example/pat-cv.pdf?sig=abc", expires_in: 120 }) })
+        : route.fulfill({ status: 409, json: err("CONFLICT", "The résumé is still being scanned.") }),
+  });
+
+  await page.goto("/admin/applications");
+  const sidebar = page.getByRole("navigation", { name: "Admin sections" });
+  await expect(sidebar.getByRole("link", { name: "Applications" })).toBeVisible();
+  await page.getByText("Pat Applicant").click();
+
+  const drawer = page.getByRole("dialog", { name: "Pat Applicant — Rebar Detailer" });
+  await drawer.getByRole("button", { name: "Get résumé link" }).click();
+  await expect(drawer.getByRole("alert")).toContainText("still being scanned");
+  await expect(drawer.getByRole("link", { name: /Download/ })).toHaveCount(0);
+
+  scanned = true;
+  await drawer.getByRole("button", { name: "Get résumé link" }).click();
+  await expect(drawer.getByRole("link", { name: /Download pat-cv\.pdf/ })).toHaveAttribute(
+    "href",
+    "https://files.example/pat-cv.pdf?sig=abc",
+  );
+});
+
+test("private files: a role without the HR permission is refused the applications screen", async ({ page }) => {
+  await stubApi(page, { "GET /api/v1/auth/session": ok(EDITOR) });
+  await page.goto("/admin/applications");
+  await expect(page.getByRole("heading", { name: "Not permitted" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Admin sections" }).getByRole("link", { name: "Applications" }),
+  ).toHaveCount(0);
+});
+
+test("permissions: an admin creates a user with a role and checks what that role grants", async ({ page }) => {
+  const admin = {
+    ...EDITOR,
+    id: 1,
+    roles: ["Admin"],
+    permissions: ["users.view_user", "users.add_user", "users.change_user", "auth.view_group"],
+  };
+  const roles = [
+    { id: 1, name: "HR", permissions: ["applications.change_jobapplication", "applications.view_jobapplication", "careers.view_jobposting"], user_count: 0 },
+    { id: 2, name: "Staff", permissions: [], user_count: 3 },
+  ];
+  const users: Array<Record<string, unknown>> = [];
+  let posted: Record<string, unknown> | undefined;
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(admin),
+    "GET /api/v1/admin/roles": ok(paginated(roles)),
+    "GET /api/v1/admin/users": (route) => route.fulfill({ json: ok(paginated(users)) }),
+    "POST /api/v1/admin/users": (route) => {
+      posted = route.request().postDataJSON() as Record<string, unknown>;
+      const row = {
+        id: 8, email: posted.email, first_name: posted.first_name, last_name: "", full_name: posted.first_name,
+        is_active: true, is_staff: true, roles: posted.roles, is_locked: false, last_login: null,
+        last_login_ip: null, created_at: "2026-09-02T00:00:00Z", updated_at: "2026-09-02T00:00:00Z",
+      };
+      users.push(row);
+      return route.fulfill({ status: 201, json: ok(row) });
+    },
+  });
+
+  await page.goto("/admin/roles");
+  await page.getByText("HR", { exact: true }).click();
+  const roleDrawer = page.getByRole("dialog", { name: "HR" });
+  await expect(roleDrawer.getByRole("region", { name: "applications" })).toContainText("view_jobapplication");
+  await roleDrawer.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("navigation", { name: "Admin sections" }).getByRole("link", { name: "Users" }).click();
+  await page.getByRole("button", { name: "New user" }).click();
+  const drawer = page.getByRole("dialog", { name: "New user" });
+  await drawer.getByLabel("Email").fill("pat.hr@mds.example");
+  await drawer.getByLabel("First name").fill("Pat");
+  await drawer.getByRole("checkbox", { name: "HR" }).check();
+  await drawer.getByRole("button", { name: "Create user" }).click();
+
+  await expect(page.getByRole("status")).toContainText("set-password email");
+  expect(posted).toMatchObject({ email: "pat.hr@mds.example", roles: ["HR"] });
+  expect(posted).not.toHaveProperty("password");
+  await expect(page.getByRole("row", { name: /pat\.hr@mds\.example/ })).toContainText("HR");
+});
+
+test("keyboard: open a row, stay inside the drawer, Escape returns focus to the row", async ({ page }) => {
+  const admin = { ...EDITOR, id: 1, roles: ["Admin"], permissions: ["users.view_user", "users.change_user", "auth.view_group"] };
+  const sam = {
+    id: 5, email: "sam@mds.example", first_name: "Sam", last_name: "Staff", full_name: "Sam Staff",
+    is_active: true, is_staff: true, roles: [], is_locked: false, last_login: null, last_login_ip: null,
+    created_at: "2026-09-01T00:00:00Z", updated_at: "2026-09-01T00:00:00Z",
+  };
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(admin),
+    "GET /api/v1/admin/roles": ok(paginated([])),
+    "GET /api/v1/admin/users": ok(paginated([sam])),
+  });
+
+  await page.goto("/admin/users");
+  const row = page.getByRole("row", { name: /sam@mds\.example/ });
+  await row.focus();
+  await page.keyboard.press("Enter");
+
+  const drawer = page.getByRole("dialog", { name: "sam@mds.example" });
+  await expect(drawer).toBeVisible();
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    expect(await drawer.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+  }
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(row).toBeFocused();
+});

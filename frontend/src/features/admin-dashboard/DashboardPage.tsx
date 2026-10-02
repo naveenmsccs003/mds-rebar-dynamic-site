@@ -82,7 +82,19 @@ export function DashboardPage() {
               <li key={t.to} className="admin-tile">
                 <Link to={t.to}>
                   <span className="admin-tile__value">
-                    {q.isPending ? <Skeleton lines={1} /> : q.isError ? "—" : q.data}
+                    {q.isPending ? (
+                      <>
+                        <span className="sr-only">Loading</span>
+                        <Skeleton lines={1} />
+                      </>
+                    ) : q.isError ? (
+                      <>
+                        <span aria-hidden="true">—</span>
+                        <span className="sr-only">Count unavailable</span>
+                      </>
+                    ) : (
+                      q.data
+                    )}
                   </span>
                   <span className="admin-tile__label">{t.label}</span>
                 </Link>

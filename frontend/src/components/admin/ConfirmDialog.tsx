@@ -1,6 +1,12 @@
-import { useEffect } from "react";
+/**
+ * Modal yes/no for destructive or consequential actions. Focus starts on
+ * Cancel (the safe choice), is trapped inside, and returns to the
+ * triggering button on close; Escape cancels (`useDialogFocus`).
+ */
+import { useRef } from "react";
 
 import { Button } from "../Button/Button";
+import { useDialogFocus } from "./useDialogFocus";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -23,29 +29,23 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onCancel]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const onKeyDown = useDialogFocus(panelRef, open, onCancel);
 
   if (!open) return null;
   return (
-    <div className="confirm" role="alertdialog" aria-modal="true" aria-label={title}>
+    <div className="confirm" role="alertdialog" aria-modal="true" aria-label={title} onKeyDown={onKeyDown}>
       <div className="confirm__backdrop" onClick={onCancel} />
-      <div className="confirm__panel">
+      <div className="confirm__panel" ref={panelRef} tabIndex={-1}>
         <h2>{title}</h2>
         {body && <p>{body}</p>}
         <div className="confirm__actions">
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={busy} data-autofocus>
             Cancel
           </Button>
           <Button
             type="button"
-            variant={destructive ? "primary" : "primary"}
+            variant="primary"
             className={destructive ? "button--danger" : undefined}
             onClick={onConfirm}
             disabled={busy}

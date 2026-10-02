@@ -1,16 +1,17 @@
 # Current State Report
 
-**Date:** 2026-09-06
+**Date:** 2026-10-02
 **Repository:** `mds_rebar_dynamic_site` — branch `main`, remote
 `github.com/naveenmsccs003/mds-rebar-dynamic-site`.
-**Status:** Phases 1–16 of `docs/DEVELOPMENT_PHASES.md` complete. This
+**Status:** Phases 1–16 of `docs/DEVELOPMENT_PHASES.md` complete, plus
+the staff/admin SPA (sub-phases A1–A7, `docs/ADMIN_UI.md`). This
 supersedes the greenfield report that occupied this file through Phase 1.
 
 ## 1. Summary
 A Django/DRF backend + a React/Vite public SPA, built in 16 phases with a
 test + docs gate at each. The **public website and its API are
-feature-complete**; the **staff/admin SPA is not built** (its API surface
-is, and is tested). Everything runs locally via `docker compose`; the CI
+feature-complete**, and the **staff/admin SPA is built** on the same API
+at `/admin` (`docs/ADMIN_UI.md`). Everything runs locally via `docker compose`; the CI
 pipeline builds production images and has placeholder deploy steps ready
 to wire to a hosting platform.
 
@@ -53,7 +54,15 @@ Public marketing site: home / about / legal (CMS-driven, Phase 5),
 services, portfolio, resources, news, careers (+ application form),
 contact, request-a-quote, global search. Design-system primitives,
 `SEOHead` (React 19 head hoisting), `JsonLd` structured data, per-route
-code splitting, `web-vitals` reporting. No admin UI.
+code splitting, `web-vitals` reporting.
+
+Staff/admin SPA at `/admin` (lazy chunks, same app): sign-in, permission-
+filtered sidebar + route gates, dashboard, CMS (sections / settings /
+tags / redirects), catalogue (services / portfolio / news with workflow +
+versions, resources, careers), inbox (quote requests, enquiries + notes,
+applications + signed résumé links), media library + picker, users,
+roles, audit log. Route map, permission rules and primitives:
+`docs/ADMIN_UI.md`.
 
 ## 4. Database
 PostgreSQL is the system of record. Models + migrations for every domain
@@ -61,9 +70,10 @@ app exist since Phase 2. The unit test suite runs on SQLite; a CI
 `integration` job runs the full suite on real Postgres + Redis.
 
 ## 5. Tests
-252 backend (`pytest`, incl. integration + query-perf + response-cache +
-acceptance + health), 91 frontend (`vitest`, incl. MSW hook tests),
-4 Playwright public-journey E2E + a deploy smoke suite. `ruff` + `bandit`
+273 backend (`pytest`, incl. integration + query-perf + response-cache +
+acceptance + health; 1 skipped on SQLite), 138 frontend (`vitest`, incl.
+MSW hook tests), 15 admin + 4 public Playwright E2E journeys + a deploy
+smoke suite. `ruff` + `bandit`
 + `pip-audit` gate the backend; `oxlint` + `npm audit` the frontend.
 
 ## 6. CI/CD (`.github/workflows/ci.yml`)
@@ -73,9 +83,11 @@ deploy-staging (auto, smoke) → deploy-production (manual environment
 gate). Deploy steps are `echo` placeholders.
 
 ## 7. Deferred / not built (by design)
-- **Staff/admin SPA** — the API is complete and tested; the React admin
-  app, and its E2E journeys (login, RBAC, publishing, user/permission
-  management, audit visibility), are a follow-on project.
+- **Admin SPA follow-ups** — an assignee picker for the Inbox (needs an
+  "assignable staff" endpoint), relation pickers for content tags /
+  technology / services; real-time updates, bulk import/export, audit
+  retention, admin i18n and a visual page builder are out of scope
+  (`ADMIN_UI.md` → Known gaps).
 - **Real deployment** — hosting platform, managed Postgres/Redis, S3
   bucket, DNS/TLS, and the concrete deploy commands. RTO and final
   backup retention are stated once a provider is chosen

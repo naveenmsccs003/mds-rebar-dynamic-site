@@ -48,6 +48,8 @@ export function WorkflowBar({
     return <p className="admin-muted">No workflow moves available from “{status}”.</p>;
   }
 
+  const blocked = allowedTransitions.filter((to) => !can(permFor(to)));
+
   return (
     <div className="workflow-bar">
       <p className="admin-muted">
@@ -74,6 +76,12 @@ export function WorkflowBar({
           );
         })}
       </div>
+      {blocked.length > 0 && (
+        <p className="admin-muted">
+          Greyed-out moves need a permission your role doesn’t have (
+          {[...new Set(blocked.map(permFor))].join(", ")}).
+        </p>
+      )}
     </div>
   );
 }

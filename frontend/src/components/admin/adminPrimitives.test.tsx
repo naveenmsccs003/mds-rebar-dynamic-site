@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -78,6 +79,25 @@ describe("AdminDataTable", () => {
     expect(onRowClick).toHaveBeenCalledWith({ id: 7, name: "Hero" });
   });
 
+  it("opens a row with Enter or Space", async () => {
+    const onRowClick = vi.fn();
+    render(
+      <AdminDataTable
+        query={{ ...baseQuery, data: page([{ id: 1, name: "Alpha" }]) }}
+        columns={cols}
+        rowKey={(r) => r.id}
+        onRowClick={onRowClick}
+        page={1}
+        onPageChange={vi.fn()}
+      />,
+    );
+    const row = screen.getByRole("row", { name: /Alpha/ });
+    row.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+  });
+
   it("shows an error state with retry", async () => {
     const refetch = vi.fn();
     render(
@@ -123,6 +143,18 @@ describe("WorkflowBar", () => {
     await userEvent.click(screen.getByRole("button", { name: "Submit for review" }));
     expect(onTransition).toHaveBeenCalledWith("review", "ready");
   });
+
+  it("says which permission the greyed-out moves need", () => {
+    render(
+      <WorkflowBar
+        status="approved"
+        allowedTransitions={["draft", "published"]}
+        permBase="pages.pagesection"
+        onTransition={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Greyed-out moves need .*pages\.publish_pagesection/)).toBeInTheDocument();
+  });
 });
 
 describe("FormDrawer", () => {
@@ -136,6 +168,54 @@ describe("FormDrawer", () => {
     expect(screen.getByRole("dialog", { name: "Edit thing" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("moves focus in, traps Tab, and restores focus on close", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>Open</button>
+          {/* a new onClose every render must not re-run the focus effect */}
+          <FormDrawer open={open} title="Edit" onClose={() => setOpen(false)}>
+            <input aria-label="Name" />
+          </FormDrawer>
+        </>
+      );
+    }
+    render(<Harness />);
+    const opener = screen.getByRole("button", { name: "Open" });
+    await userEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Edit" });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    await userEvent.tab(); // Close button (first in the panel)
+    await userEvent.tab(); // Name
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+    await userEvent.type(screen.getByLabelText("Name"), "abc"); // parent re-renders don't steal focus
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+    await userEvent.tab(); // wraps back to Close
+    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();
+    await userEvent.tab({ shift: true }); // and backwards to the last control
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(opener).toHaveFocus();
+  });
+
+  it("Escape in a nested confirm closes only the confirm", async () => {
+    const onDrawerClose = vi.fn();
+    const onCancel = vi.fn();
+    render(
+      <FormDrawer open title="Edit" onClose={onDrawerClose}>
+        <ConfirmDialog open title="Sure?" onConfirm={vi.fn()} onCancel={onCancel} />
+      </FormDrawer>,
+    );
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(onCancel).toHaveBeenCalled();
+    expect(onDrawerClose).not.toHaveBeenCalled();
   });
 
   it("renders nothing when closed", () => {

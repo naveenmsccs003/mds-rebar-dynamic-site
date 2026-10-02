@@ -649,3 +649,40 @@
   - +3 vitest (upload orchestration + library alt-text edit + picker
     swap) → 124; +1 Playwright admin journey (pick a library image for a
     service hero). `lint` / `build` green.
+- **A6 — Users, roles, audit.**
+  - No backend change (the endpoints landed in A1).
+  - `features/admin-people/`: `UsersPage` (search / role / active
+    filters; create — blank password → set-password email notice; edit
+    name / staff / roles via a role checkbox picker; deactivate with
+    confirm / reactivate; no delete; can't deactivate yourself),
+    `RolesPage` (read-only roles + user counts, permissions grouped by
+    app). `features/admin-audit/`: `AuditLogPage` (action / entity_type /
+    actor filters, cursor paging with the cursor in the URL, drawer with
+    an `AuditDiff` before/after table). `AdminDataTable` accepts a
+    `CursorPage` + a `pager` slot.
+  - +8 vitest → 132; +2 Playwright admin journeys → 9 admin + 4 public.
+- **A7 — Admin E2E completion + polish.**
+  - CI: the search provider test asserted SQLite unconditionally and had
+    failed the Postgres `integration` job since Phase 11; it now checks
+    `auto` picks the right provider per database. Dev settings use the
+    in-process cache in SQLite local-dev mode (no Redis needed for
+    throttled endpoints).
+  - A11y: `useDialogFocus` (focus in / trap / restore, element-level
+    Escape so nested dialogs close one at a time) behind `FormDrawer`
+    and `ConfirmDialog` — also fixes the drawer re-focusing its panel on
+    every parent re-render (it depended on an inline `onClose`); Cancel
+    is the confirm's initial focus. Table rows open with Space as well as
+    Enter, with an sr-only caption. `WorkflowBar` names the permission a
+    greyed-out move needs. Loading states in the media screens and
+    dashboard tiles are announced.
+  - Consistency: edit drawers for CMS sections, catalogue workflow
+    resources and simple resources go read-only (fieldset disabled +
+    "requires …" note) without `change_<model>`, matching inbox / media
+    / users.
+  - +6 Playwright admin journeys (BD quote gating + server 403, media
+    upload flow, résumé link refused while scanning then signed, HR-only
+    applications, create a user with a role after reading it, keyboard
+    drawer journey) → 15 admin + 4 public; +6 vitest → 138.
+  - Docs: new `ADMIN_UI.md` (route map, permission → nav / control
+    table, primitives contract); `CURRENT_STATE.md`, `TESTING.md`,
+    `UI_DESIGN_SYSTEM.md` updated.

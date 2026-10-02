@@ -71,6 +71,9 @@ export function AdminDataTable<T>({
       ) : (
         <>
           <table>
+            {onRowClick && (
+              <caption className="sr-only">Select a row (Enter or Space) to open its details.</caption>
+            )}
             <thead>
               <tr>
                 {columns.map((c) => (
@@ -90,7 +93,11 @@ export function AdminDataTable<T>({
                   onKeyDown={
                     onRowClick
                       ? (e) => {
-                          if (e.key === "Enter") onRowClick(row);
+                          if (e.target !== e.currentTarget) return; // a control inside the row
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onRowClick(row);
+                          }
                         }
                       : undefined
                   }

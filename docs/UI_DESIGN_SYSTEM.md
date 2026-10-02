@@ -97,6 +97,15 @@ CSR → Call To Action → Footer. Each section renders from an API response;
 editors reorder/hide sections and edit copy from the CMS without a
 frontend deploy.
 
+### Admin primitives (Admin SPA A2–A7)
+`src/components/admin/`: `AdminDataTable` (server-paginated or cursor-
+paged, loading / empty / error, keyboard-openable rows), `FormDrawer`
+and `ConfirmDialog` (focus moved in, trapped and restored via
+`useDialogFocus`; Escape closes only the innermost dialog), the
+`FormField` set, `WorkflowBar` (disabled moves name the missing
+permission), `VersionHistoryPanel`, `DetailList`. Contract and the
+permission → control rules: `docs/ADMIN_UI.md`.
+
 ## Accessibility targets
 WCAG 2.2 AA across both the public site and the admin panel: semantic
 HTML landmarks, logical heading order, full keyboard navigation,

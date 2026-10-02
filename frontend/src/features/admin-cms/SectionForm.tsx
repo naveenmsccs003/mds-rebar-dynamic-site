@@ -36,6 +36,7 @@ export function SectionForm({ section, onSaved }: Props) {
   const rollback = useSectionRollback();
   const versions = useSectionVersions(editing ? section.id : null);
   const can = usePermissionChecker();
+  const readOnly = editing && !can("pages.change_pagesection");
 
   const [pageKey, setPageKey] = useState(section?.page_key ?? "");
   const [sectionKey, setSectionKey] = useState(section?.section_key ?? "");
@@ -80,41 +81,44 @@ export function SectionForm({ section, onSaved }: Props) {
             {formErr}
           </p>
         )}
-        <TextField
-          label="Page key"
-          value={pageKey}
-          error={fieldErr.page_key}
-          onChange={(e) => setPageKey(e.target.value)}
-        />
-        <TextField
-          label="Section key"
-          value={sectionKey}
-          error={fieldErr.section_key}
-          onChange={(e) => setSectionKey(e.target.value)}
-        />
-        <TextField
-          label="Display order"
-          type="number"
-          value={order}
-          error={fieldErr.display_order}
-          onChange={(e) => setOrder(e.target.value)}
-        />
-        <label className="form__field">
-          <span>Content (JSON)</span>
-          <textarea
-            className="admin-code"
-            rows={12}
-            value={contentText}
-            aria-invalid={jsonError ? true : undefined}
-            onChange={(e) => setContentText(e.target.value)}
+        <fieldset className="form__fieldset" disabled={readOnly}>
+          <TextField
+            label="Page key"
+            value={pageKey}
+            error={fieldErr.page_key}
+            onChange={(e) => setPageKey(e.target.value)}
           />
-          {(jsonError || fieldErr.content) && (
-            <span className="form__error">{jsonError ?? fieldErr.content}</span>
-          )}
-        </label>
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : editing ? "Save changes" : "Create section"}
-        </Button>
+          <TextField
+            label="Section key"
+            value={sectionKey}
+            error={fieldErr.section_key}
+            onChange={(e) => setSectionKey(e.target.value)}
+          />
+          <TextField
+            label="Display order"
+            type="number"
+            value={order}
+            error={fieldErr.display_order}
+            onChange={(e) => setOrder(e.target.value)}
+          />
+          <label className="form__field">
+            <span>Content (JSON)</span>
+            <textarea
+              className="admin-code"
+              rows={12}
+              value={contentText}
+              aria-invalid={jsonError ? true : undefined}
+              onChange={(e) => setContentText(e.target.value)}
+            />
+            {(jsonError || fieldErr.content) && (
+              <span className="form__error">{jsonError ?? fieldErr.content}</span>
+            )}
+          </label>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving…" : editing ? "Save changes" : "Create section"}
+          </Button>
+          {readOnly && <p className="admin-muted">Read-only: requires pages.change_pagesection.</p>}
+        </fieldset>
       </form>
 
       {editing && (
