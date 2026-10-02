@@ -153,6 +153,29 @@ export const adminRoute: RouteObject = {
           ),
         },
 
+        // --- users, roles, audit (A6) ---
+        {
+          path: "users",
+          element: gated(
+            "users.view_user",
+            lazyRoute(() => import("../features/admin-people/UsersPage"), (m) => m.UsersPage),
+          ),
+        },
+        {
+          path: "roles",
+          element: gated(
+            "auth.view_group",
+            lazyRoute(() => import("../features/admin-people/RolesPage"), (m) => m.RolesPage),
+          ),
+        },
+        {
+          path: "audit",
+          element: gated(
+            "audit.view_auditlog",
+            lazyRoute(() => import("../features/admin-audit/AuditLogPage"), (m) => m.AuditLogPage),
+          ),
+        },
+
         {
           path: "*",
           element: lazyRoute(

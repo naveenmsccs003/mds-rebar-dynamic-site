@@ -3,9 +3,6 @@
  * codename(s) that make it visible — the same codenames the backend
  * viewsets require, so a role sees exactly the sections it can use. A
  * missing `perms` means "any signed-in staff user".
- *
- * Sections are filled in per admin sub-phase (A2 CMS, A3 catalogue, …);
- * an unbuilt route points at a placeholder until then.
  */
 export interface AdminNavItem {
   label: string;

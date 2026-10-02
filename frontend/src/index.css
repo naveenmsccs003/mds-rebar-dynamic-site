@@ -1260,3 +1260,50 @@ fieldset.form__field label {
   border-radius: var(--radius);
   border: 1px solid var(--color-border);
 }
+
+/* --- Users / roles / audit (A6) --- */
+.status-pill--active {
+  background: #e6f4ea;
+  border-color: #b7e0c4;
+}
+.status-pill--inactive {
+  color: var(--color-text-muted);
+}
+.form__fieldset {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.perm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+.audit-diff {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  table-layout: fixed;
+}
+.audit-diff th,
+.audit-diff td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.audit-diff thead th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.audit-diff__row--changed td {
+  background: #fff4e0;
+}

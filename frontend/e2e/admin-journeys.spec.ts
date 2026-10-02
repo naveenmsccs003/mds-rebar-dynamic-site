@@ -341,3 +341,92 @@ test("a stale /admin deep link after logout returns to login", async ({ page }) 
   await page.goto("/admin/password");
   await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%2Fpassword/);
 });
+
+test("users: an admin deactivates a user", async ({ page }) => {
+  const admin = {
+    ...EDITOR,
+    id: 1,
+    email: "admin@mds.example",
+    roles: ["Admin"],
+    permissions: ["users.view_user", "users.add_user", "users.change_user", "auth.view_group"],
+  };
+  const sam = {
+    id: 5,
+    email: "sam@mds.example",
+    first_name: "Sam",
+    last_name: "Staff",
+    full_name: "Sam Staff",
+    is_active: true,
+    is_staff: true,
+    roles: ["HR"],
+    is_locked: false,
+    last_login: null,
+    last_login_ip: null,
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+  };
+  let patched: Record<string, unknown> | undefined;
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(admin),
+    "GET /api/v1/admin/roles": ok(paginated([{ id: 1, name: "HR", permissions: [], user_count: 1 }])),
+    "GET /api/v1/admin/users": (route) => route.fulfill({ json: ok(paginated([sam])) }),
+    "PATCH /api/v1/admin/users/5": (route) => {
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      Object.assign(sam, patched);
+      return route.fulfill({ json: ok(sam) });
+    },
+  });
+
+  await page.goto("/admin/users");
+  const row = page.getByRole("row", { name: /sam@mds\.example/ });
+  await expect(row.getByText("Active")).toBeVisible();
+  await row.click();
+
+  const drawer = page.getByRole("dialog", { name: "sam@mds.example" });
+  await drawer.getByRole("button", { name: "Deactivate user" }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Deactivate this user?" });
+  await confirm.getByRole("button", { name: "Deactivate" }).click();
+
+  await expect(drawer).toBeHidden();
+  expect(patched).toEqual({ is_active: false });
+  await expect(row.getByText("Inactive")).toBeVisible();
+});
+
+test("audit: an auditor reads the log but gets no write controls", async ({ page }) => {
+  const auditor = { ...EDITOR, roles: ["Auditor"], permissions: ["audit.view_auditlog"] };
+  const entry = {
+    id: 10,
+    action: "user.updated",
+    entity_type: "users.User",
+    entity_id: "5",
+    actor: 1,
+    actor_email: "admin@mds.example",
+    before: { is_active: true },
+    after: { is_active: false },
+    ip_address: "10.0.0.1",
+    user_agent: "Firefox",
+    timestamp: "2026-09-02T10:00:00Z",
+  };
+
+  await stubApi(page, {
+    "GET /api/v1/auth/session": ok(auditor),
+    "GET /api/v1/admin/audit": ok({ next: null, previous: null, results: [entry] }),
+  });
+
+  await page.goto("/admin/audit");
+  const sidebar = page.getByRole("navigation", { name: "Admin sections" });
+  await expect(sidebar.getByRole("link", { name: "Audit log" })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Users" })).toHaveCount(0);
+
+  await page.getByText("user.updated").click();
+  const drawer = page.getByRole("dialog", { name: "user.updated — users.User #5" });
+  await expect(drawer.getByText("admin@mds.example")).toBeVisible();
+  await expect(drawer.locator(".audit-diff__row--changed")).toHaveText(/is_active.*true.*false/);
+  await expect(drawer.getByRole("button", { name: /save|delete|edit/i })).toHaveCount(0);
+
+  // A forbidden screen renders the 403 panel rather than the page.
+  await page.goto("/admin/users");
+  await expect(page.getByRole("heading", { name: "Not permitted" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Users" })).toHaveCount(0);
+});

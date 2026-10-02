@@ -6,7 +6,7 @@
  */
 import type { ReactNode } from "react";
 
-import type { Paginated } from "../../api/envelope";
+import type { CursorPage, Paginated } from "../../api/envelope";
 import { PAGE_SIZE } from "../../api/request";
 import { ErrorState } from "../ErrorState/ErrorState";
 import { Pagination } from "../Pagination/Pagination";
@@ -21,7 +21,7 @@ export interface Column<T> {
 
 export interface AdminDataTableProps<T> {
   query: {
-    data: Paginated<T> | undefined;
+    data: Paginated<T> | CursorPage<T> | undefined;
     isPending: boolean;
     isError: boolean;
     error?: unknown;
@@ -30,8 +30,11 @@ export interface AdminDataTableProps<T> {
   columns: Column<T>[];
   rowKey: (row: T) => string | number;
   onRowClick?: (row: T) => void;
-  page: number;
-  onPageChange: (page: number) => void;
+  /** Page-number pagination; ignored when `pager` is given. */
+  page?: number;
+  onPageChange?: (page: number) => void;
+  /** Replaces the count + page-number footer (cursor-paginated lists). */
+  pager?: ReactNode;
   emptyLabel?: string;
   /** Rendered above the table (a FilterBar, a "New" button, …). */
   toolbar?: ReactNode;
@@ -42,8 +45,9 @@ export function AdminDataTable<T>({
   columns,
   rowKey,
   onRowClick,
-  page,
-  onPageChange,
+  page = 1,
+  onPageChange = () => {},
+  pager,
   emptyLabel = "Nothing here yet.",
   toolbar,
 }: AdminDataTableProps<T>) {
@@ -99,12 +103,17 @@ export function AdminDataTable<T>({
             </tbody>
           </table>
           <div className="admin-table__footer">
-            <p className="admin-muted">{data.count} total</p>
-            <Pagination
-              page={page}
-              pageCount={Math.ceil(data.count / PAGE_SIZE)}
-              onChange={onPageChange}
-            />
+            {pager ??
+              ("count" in data && (
+                <>
+                  <p className="admin-muted">{data.count} total</p>
+                  <Pagination
+                    page={page}
+                    pageCount={Math.ceil(data.count / PAGE_SIZE)}
+                    onChange={onPageChange}
+                  />
+                </>
+              ))}
           </div>
         </>
       )}

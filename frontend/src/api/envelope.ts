@@ -27,3 +27,14 @@ export interface Paginated<T> {
   previous: string | null;
   results: T[];
 }
+
+/**
+ * DRF `CursorPagination` page (append-heavy lists such as the audit log,
+ * docs/API_DESIGN.md): no `count`, and `next`/`previous` are full URLs
+ * carrying an opaque `cursor` query parameter.
+ */
+export interface CursorPage<T> {
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
