@@ -1,5 +1,6 @@
 """Phase 11 — global search: SimpleSearchProvider + the /api/v1/search/ endpoint."""
 import pytest
+from django.db import connection
 from rest_framework.test import APIClient
 
 from apps.careers.models import JobPosting
@@ -9,7 +10,7 @@ from apps.portfolio.models import Project
 from apps.resources.models import Resource, ResourceCategory
 from apps.services.models import Service
 
-from .providers import SimpleSearchProvider, get_search_provider
+from .providers import PostgresSearchProvider, SimpleSearchProvider, get_search_provider
 
 URL = "/api/v1/search/"
 
@@ -41,8 +42,12 @@ def corpus(db):
 
 
 @pytest.mark.django_db
-def test_provider_is_simple_on_sqlite():
-    assert isinstance(get_search_provider(), SimpleSearchProvider)
+def test_auto_provider_follows_the_database(settings):
+    # "auto" -> Postgres full-text search on PostgreSQL (the CI integration
+    # job), the portable icontains fallback everywhere else (SQLite suite).
+    settings.SEARCH_PROVIDER = "auto"
+    expected = PostgresSearchProvider if connection.vendor == "postgresql" else SimpleSearchProvider
+    assert isinstance(get_search_provider(), expected)
 
 
 @pytest.mark.django_db
